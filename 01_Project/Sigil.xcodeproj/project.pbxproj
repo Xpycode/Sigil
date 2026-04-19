@@ -7,14 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B074EFA87EB956E2EB2BDD9 /* VolumeStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0A197241B7A982DB1724409 /* VolumeStoreTests.swift */; };
 		0E4DB3B53938BB4F7DE37FED /* SigilTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19EACD2383B8E252530E6655 /* SigilTests.swift */; };
+		33CBDF00AE808123AFE3F415 /* VolumeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3E3FCEF240404A5D1E7FD5 /* VolumeStore.swift */; };
 		35D7F244074221C0975B8259 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D24749E6D0EA0E7E3C731E2 /* SidebarView.swift */; };
 		3BE83F89B77F44BF74BBE7C4 /* FCPToolbarButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6A6F8D1B504ACECC6BD5344 /* FCPToolbarButtonStyle.swift */; };
+		5C43951E3173EC4E79C68715 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894E72FB845A244E51CE7F3A /* AppPaths.swift */; };
 		6BD25C142EFEB877315240A6 /* SigilApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B24E0DAB90A302402EAFE10 /* SigilApp.swift */; };
 		7EAD3F4F6A99D23F9AB5B321 /* VolumeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCB2A30B0730E410589936D /* VolumeDetailView.swift */; };
 		8CC1D2F35939C992FF5A59E5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6493440CFC53E0EA4100E2B0 /* Theme.swift */; };
+		8E2C621C8BE1E38A75F3C72E /* VolumeRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC80A643A448921ECDCDCBEB /* VolumeRecord.swift */; };
+		ABD2920FA60BBEEB4F5CBD80 /* VolumeIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC18AD9DDFE8F8D9EC07FE69 /* VolumeIdentity.swift */; };
 		C3160635C483E514017D9D1E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 498D4BC24BD7147B6C095840 /* Assets.xcassets */; };
 		CD9BB099DD47CE1D1FAF2B6A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39EFB8419DBC83F313DA1A36 /* ContentView.swift */; };
+		D29A40EAE4F532367493495A /* FitMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD2239F3436082493D52E1A /* FitMode.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,16 +42,32 @@
 		3B24E0DAB90A302402EAFE10 /* SigilApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigilApp.swift; sourceTree = "<group>"; };
 		498D4BC24BD7147B6C095840 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6493440CFC53E0EA4100E2B0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		894E72FB845A244E51CE7F3A /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
+		ADD2239F3436082493D52E1A /* FitMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitMode.swift; sourceTree = "<group>"; };
 		BC9B7C9339E27BD4E04B2827 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D6A6F8D1B504ACECC6BD5344 /* FCPToolbarButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCPToolbarButtonStyle.swift; sourceTree = "<group>"; };
+		E0A197241B7A982DB1724409 /* VolumeStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeStoreTests.swift; sourceTree = "<group>"; };
 		EA49A4A477D8CF991A8790FC /* Sigil.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sigil.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC18AD9DDFE8F8D9EC07FE69 /* VolumeIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeIdentity.swift; sourceTree = "<group>"; };
+		EC3E3FCEF240404A5D1E7FD5 /* VolumeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeStore.swift; sourceTree = "<group>"; };
+		EC80A643A448921ECDCDCBEB /* VolumeRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeRecord.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		00C6DA0C85D3BC0EDD5169E3 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				894E72FB845A244E51CE7F3A /* AppPaths.swift */,
+				EC3E3FCEF240404A5D1E7FD5 /* VolumeStore.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		14D9437EB8BDC254638BE7D8 /* SigilTests */ = {
 			isa = PBXGroup;
 			children = (
 				19EACD2383B8E252530E6655 /* SigilTests.swift */,
+				E0A197241B7A982DB1724409 /* VolumeStoreTests.swift */,
 			);
 			path = SigilTests;
 			sourceTree = "<group>";
@@ -63,11 +85,23 @@
 			isa = PBXGroup;
 			children = (
 				F31EE15A4539B6E474414149 /* App */,
+				AF369FE2E9681261B902ABA1 /* Models */,
+				00C6DA0C85D3BC0EDD5169E3 /* Services */,
 				C328F5C9311CB6C69C84D04B /* Views */,
 				498D4BC24BD7147B6C095840 /* Assets.xcassets */,
 				BC9B7C9339E27BD4E04B2827 /* Info.plist */,
 			);
 			path = Sigil;
+			sourceTree = "<group>";
+		};
+		AF369FE2E9681261B902ABA1 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				ADD2239F3436082493D52E1A /* FitMode.swift */,
+				EC18AD9DDFE8F8D9EC07FE69 /* VolumeIdentity.swift */,
+				EC80A643A448921ECDCDCBEB /* VolumeRecord.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		C328F5C9311CB6C69C84D04B /* Views */ = {
@@ -194,6 +228,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0E4DB3B53938BB4F7DE37FED /* SigilTests.swift in Sources */,
+				0B074EFA87EB956E2EB2BDD9 /* VolumeStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -201,12 +236,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C43951E3173EC4E79C68715 /* AppPaths.swift in Sources */,
 				CD9BB099DD47CE1D1FAF2B6A /* ContentView.swift in Sources */,
 				3BE83F89B77F44BF74BBE7C4 /* FCPToolbarButtonStyle.swift in Sources */,
+				D29A40EAE4F532367493495A /* FitMode.swift in Sources */,
 				35D7F244074221C0975B8259 /* SidebarView.swift in Sources */,
 				6BD25C142EFEB877315240A6 /* SigilApp.swift in Sources */,
 				8CC1D2F35939C992FF5A59E5 /* Theme.swift in Sources */,
 				7EAD3F4F6A99D23F9AB5B321 /* VolumeDetailView.swift in Sources */,
+				ABD2920FA60BBEEB4F5CBD80 /* VolumeIdentity.swift in Sources */,
+				8E2C621C8BE1E38A75F3C72E /* VolumeRecord.swift in Sources */,
+				33CBDF00AE808123AFE3F415 /* VolumeStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
