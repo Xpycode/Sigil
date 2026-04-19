@@ -11,12 +11,13 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** build (Waves 0–4 done; Wave 5 next — the critical risk wave)
+- **Funnel:** build (Waves 0–5 done, including the critical risk wave; Wave 6 next)
 - **Phase:** implementation
-- **Focus:** Wave 5 — IconApplier (xattr + atomic write to `/Volumes/X/.VolumeIcon.icns`), the central spec risk
+- **Focus:** Wave 6 — ViewModels + smart-silent reapply orchestration
 - **Status:** ready
 - **Last updated:** 2026-04-19
-- **Test count:** 17 green
+- **Test count:** 24 green (incl. 7 real-APFS integration tests)
+- **Spec risk:** ✅ two-step write verified on scratch DMG AND real external drive (user-confirmed)
 
 ## Funnel Progress
 
@@ -29,7 +30,7 @@
 ## Phase Progress
 
 ```
-[###############.....] 73% — Waves 0-4 shipped (+ icon rendering pipeline); Wave 5 is the xattr risk wave
+[################....] 83% — Waves 0-5 shipped (core risk proven end-to-end); Wave 6 next (orchestration)
 ```
 
 | Phase | Status | Notes |
