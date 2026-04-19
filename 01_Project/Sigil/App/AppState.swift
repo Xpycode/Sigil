@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AppKit
 
 /// Top-level orchestrator. Owns the persistent store, enumerator, and watcher;
 /// exposes the data the UI binds to and the high-level actions the UI invokes.
@@ -12,6 +13,11 @@ final class AppState {
     private(set) var mounted: [VolumeInfo] = []
     private(set) var remembered: [VolumeRecord] = []
     var selectedID: String?
+
+    /// Cached icon thumbnails keyed by `identity.raw`. Populated at bootstrap
+    /// from the on-disk `.icns` cache; refreshed surgically on apply/reset/forget.
+    /// Drives the sidebar's per-row thumbnail — a glanceable "what's applied where".
+    private(set) var iconThumbnails: [String: NSImage] = [:]
 
     /// Conflicts surfaced by `SmartSilentApplier` that the user hasn't resolved
     /// yet. Rendered as an in-app banner in the detail pane.
@@ -49,8 +55,32 @@ final class AppState {
             print("Sigil: failed to load VolumeStore — \(error)")
         }
         ConflictNotifier.shared.attach(to: self)
+        loadAllThumbnails()
         await refresh()
         startWatching()
+    }
+
+    /// Populate `iconThumbnails` by reading every remembered record's cached
+    /// `.icns` file. Runs synchronously on the main actor (fast: 20 drives ≈ <50ms).
+    private func loadAllThumbnails() {
+        var result: [String: NSImage] = [:]
+        for record in remembered {
+            if let data = try? IconCache.loadIcns(for: record.identity),
+               let image = NSImage(data: data) {
+                result[record.identity.raw] = image
+            }
+        }
+        iconThumbnails = result
+    }
+
+    /// Refresh a single thumbnail by re-reading its cached `.icns`.
+    private func refreshThumbnail(for identity: VolumeIdentity) {
+        if let data = try? IconCache.loadIcns(for: identity),
+           let image = NSImage(data: data) {
+            iconThumbnails[identity.raw] = image
+        } else {
+            iconThumbnails.removeValue(forKey: identity.raw)
+        }
     }
 
     func refresh() async {
@@ -136,6 +166,7 @@ final class AppState {
         )
         try await store.upsert(record)
         self.remembered = await store.allRecords()
+        refreshThumbnail(for: identity)
         // Clear any conflict banner for this volume — we just authoritatively set the icon.
         pendingConflicts.removeAll { $0.identity == identity }
     }
@@ -148,6 +179,7 @@ final class AppState {
         try? IconCache.delete(for: identity)
         _ = try await store.remove(identity: identity)
         self.remembered = await store.allRecords()
+        iconThumbnails.removeValue(forKey: identity.raw)
         pendingConflicts.removeAll { $0.identity == identity }
     }
 
@@ -158,7 +190,19 @@ final class AppState {
         _ = try await store.remove(identity: identity)
         try? IconCache.delete(for: identity)
         self.remembered = await store.allRecords()
+        iconThumbnails.removeValue(forKey: identity.raw)
         pendingConflicts.removeAll { $0.identity == identity }
+    }
+
+    /// Update just the note on a remembered volume. No-op if the volume
+    /// isn't in the store yet (wait for Apply to create the record first).
+    func updateNote(for identity: VolumeIdentity, to newNote: String) async throws {
+        guard let store else { throw Error.notReady }
+        guard var record = await store.record(for: identity) else { return }
+        guard record.note != newNote else { return }
+        record.note = newNote
+        try await store.upsert(record)
+        self.remembered = await store.allRecords()
     }
 
     // MARK: - Conflict resolution

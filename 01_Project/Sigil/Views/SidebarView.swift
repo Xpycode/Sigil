@@ -16,7 +16,8 @@ struct SidebarView: View {
                             name: info.name,
                             subtitle: info.format ?? "—",
                             isMounted: true,
-                            isRemembered: isRemembered(info)
+                            isRemembered: isRemembered(info),
+                            thumbnail: thumbnail(for: info.identity)
                         )
                         .tag(info.id)
                     }
@@ -32,7 +33,8 @@ struct SidebarView: View {
                             name: record.name,
                             subtitle: record.note.isEmpty ? "—" : record.note,
                             isMounted: false,
-                            isRemembered: true  // By definition.
+                            isRemembered: true,  // By definition.
+                            thumbnail: appState.iconThumbnails[record.identity.raw]
                         )
                         .tag(record.id)
                     }
@@ -55,5 +57,10 @@ struct SidebarView: View {
     private func isRemembered(_ info: VolumeInfo) -> Bool {
         guard let id = info.identity else { return false }
         return appState.remembered.contains { $0.identity == id }
+    }
+
+    private func thumbnail(for identity: VolumeIdentity?) -> NSImage? {
+        guard let id = identity else { return nil }
+        return appState.iconThumbnails[id.raw]
     }
 }
