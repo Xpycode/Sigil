@@ -61,14 +61,78 @@ struct VolumeDetailView: View {
             keyValueRow("Capacity", Self.formatBytes(info.capacityBytes))
             keyValueRow("Type", info.typeLabel)
 
-            Spacer()
+            Divider().background(Theme.separator).padding(.top, 8)
 
-            Text("Wave 7 will add the icon editor, Fit/Fill toggle, note, and Apply / Reset / Forget actions here.")
-                .font(.caption)
-                .foregroundStyle(Theme.tertiaryText)
-                .padding(.top, 4)
+            wave5SmokeTestBlock(info)
+
+            Spacer()
         }
         .padding(24)
+    }
+
+    // MARK: - Wave 5 smoke test (temporary — removed in Wave 7)
+
+    @ViewBuilder
+    private func wave5SmokeTestBlock(_ info: VolumeInfo) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("⚠︎ Wave 5 smoke test")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.accent)
+
+            Text("Apply an orange test icon with the first 3 letters of this volume's name. Check Finder (sidebar + Get Info) to confirm. Use Reset to strip the icon and clear the flag. This block is removed in Wave 7.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack {
+                Button("Apply test icon") {
+                    Task { await applyTestIcon(to: info) }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
+
+                Button("Reset") {
+                    Task { await resetIcon(on: info) }
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let status = smokeStatus {
+                Text(status)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(status.hasPrefix("✓") ? Theme.primaryText : Theme.accent)
+            }
+        }
+        .padding(12)
+        .background(Theme.elevatedBackground.opacity(0.5))
+        .cornerRadius(6)
+    }
+
+    @State private var smokeStatus: String? = nil
+
+    private func applyTestIcon(to info: VolumeInfo) async {
+        smokeStatus = "Rendering icon…"
+        do {
+            let image = TestIconFactory.makeIcon(label: info.name)
+            let icns = try await IconRenderer.render(image: image)
+            smokeStatus = "Writing to volume…"
+            let applier = IconApplier()
+            let hash = try await applier.apply(icns: icns, to: info.url)
+            smokeStatus = "✓ Applied. Hash: \(hash.prefix(12))…"
+        } catch {
+            smokeStatus = "✗ \(error.localizedDescription)"
+        }
+    }
+
+    private func resetIcon(on info: VolumeInfo) async {
+        smokeStatus = "Resetting…"
+        do {
+            let applier = IconApplier()
+            try await applier.reset(volumeURL: info.url)
+            smokeStatus = "✓ Reset. Icon & flag removed."
+        } catch {
+            smokeStatus = "✗ \(error.localizedDescription)"
+        }
     }
 
     private func rememberedDetail(_ record: VolumeRecord) -> some View {

@@ -19,7 +19,17 @@ enum IconRenderer {
 
         // Full pipeline.
         let image = try ImageNormalizer.normalize(source: source, mode: mode)
+        return try await renderInternal(image: image)
+    }
 
+    /// Produce `.icns` data directly from an in-memory `NSImage` — used for
+    /// Wave 5's manual smoke test and any future programmatic-icon cases.
+    /// Assumes the image is already square (1024×1024 preferred).
+    static func render(image: NSImage) async throws -> Data {
+        try await renderInternal(image: image)
+    }
+
+    private static func renderInternal(image: NSImage) async throws -> Data {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("Sigil-render-\(UUID().uuidString)", isDirectory: true)
         let iconsetDir = tempDir.appendingPathComponent("icon.iconset", isDirectory: true)
