@@ -17,6 +17,8 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.primaryBackground)
+        .sigilAlert(title: "Something went wrong", message: $appState.lastError)
+        .sigilAlert(title: "Volume memory recovered", message: $appState.lastLoadWarning)
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
                 PaneToggleButton(

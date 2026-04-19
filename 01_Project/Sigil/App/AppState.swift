@@ -23,6 +23,15 @@ final class AppState {
     /// yet. Rendered as an in-app banner in the detail pane.
     private(set) var pendingConflicts: [SmartSilentApplier.Outcome.Conflict] = []
 
+    /// Error surfaced to the user via `.alert`. Set on background-failure paths
+    /// (bootstrap, smart-silent re-apply). User-initiated errors (Apply button,
+    /// Reset button) surface inline in `VolumeDetailView` instead.
+    var lastError: String?
+
+    /// Non-blocking warning surfaced at launch when `VolumeStore.load` had to
+    /// recover from backup or start empty due to corruption.
+    var lastLoadWarning: String?
+
     /// Toolbar toggle — when `true` the sidebar also lists boot/system/DMG volumes.
     var showAllVolumes: Bool = false {
         didSet {
@@ -45,19 +54,41 @@ final class AppState {
     init() {}
 
     func bootstrap() async {
+        Log.ui.info("Sigil bootstrap starting")
         do {
             let store = try VolumeStore()
             self.store = store
-            _ = try await store.load()
+            let result = try await store.load()
             self.remembered = await store.allRecords()
             self.smart = SmartSilentApplier(store: store, applier: applier)
+            handleLoadResult(result)
         } catch {
-            print("Sigil: failed to load VolumeStore — \(error)")
+            Log.io.error("VolumeStore init/load failed: \(error.localizedDescription)")
+            lastError = "Sigil couldn't initialize its volume memory. \(error.localizedDescription)"
         }
         ConflictNotifier.shared.attach(to: self)
         loadAllThumbnails()
         await refresh()
         startWatching()
+        Log.ui.info("Sigil bootstrap complete — \(self.remembered.count, privacy: .public) remembered, \(self.mounted.count, privacy: .public) mounted")
+    }
+
+    private func handleLoadResult(_ result: VolumeStore.LoadResult) {
+        switch result {
+        case .freshStart:
+            Log.io.info("VolumeStore: fresh start (no prior store)")
+        case .loadedPrimary(let n):
+            Log.io.info("VolumeStore: loaded \(n, privacy: .public) records from primary")
+        case .recoveredFromBackup(let n, let err):
+            Log.io.warning("VolumeStore: recovered \(n, privacy: .public) records from .bak (primary error: \(err.localizedDescription))")
+            lastLoadWarning = "Sigil couldn't read its primary volume memory file but recovered \(n) record\(n == 1 ? "" : "s") from the backup. Recent changes since the last successful save may have been lost."
+        case .primaryCorruptNoBackup(let err):
+            Log.io.error("VolumeStore: primary corrupt, no backup (error: \(err.localizedDescription))")
+            lastLoadWarning = "Sigil couldn't read its volume memory file and no backup was available. Starting fresh — your previously-remembered volumes are gone. If you have a backup in Time Machine, you can restore ~/Library/Application Support/Sigil/volumes.json manually."
+        case .bothCorrupt(let pErr, _):
+            Log.io.error("VolumeStore: both primary and backup corrupt (primary: \(pErr.localizedDescription))")
+            lastLoadWarning = "Sigil couldn't read its volume memory file or its backup. Starting fresh — your previously-remembered volumes are gone. If you have a backup in Time Machine, you can restore ~/Library/Application Support/Sigil/volumes.json manually."
+        }
     }
 
     /// Populate `iconThumbnails` by reading every remembered record's cached
@@ -146,6 +177,8 @@ final class AppState {
         cacheSource: URL?,
         store: VolumeStore
     ) async throws {
+        Log.ui.info("apply: \(info.name, privacy: .public) (mode: \(fitMode.rawValue, privacy: .public), \(icns.count, privacy: .public) bytes)")
+
         try IconCache.saveIcns(icns, for: identity)
         if let cacheSource {
             try IconCache.saveSource(cacheSource, for: identity)
@@ -167,14 +200,15 @@ final class AppState {
         try await store.upsert(record)
         self.remembered = await store.allRecords()
         refreshThumbnail(for: identity)
-        // Clear any conflict banner for this volume — we just authoritatively set the icon.
         pendingConflicts.removeAll { $0.identity == identity }
+        Log.ui.info("apply: success on \(info.name, privacy: .public), hash \(hash.prefix(12), privacy: .public)…")
     }
 
     /// Reset the icon on a mounted volume and remove the record.
     func resetIcon(for info: VolumeInfo) async throws {
         guard let identity = info.identity else { throw Error.noIdentity }
         guard let store else { throw Error.notReady }
+        Log.ui.info("reset: \(info.name, privacy: .public)")
         try await applier.reset(volumeURL: info.url)
         try? IconCache.delete(for: identity)
         _ = try await store.remove(identity: identity)
@@ -187,6 +221,7 @@ final class AppState {
     /// leaves any `.VolumeIcon.icns` that may be on the physical volume intact.
     func forget(identity: VolumeIdentity) async throws {
         guard let store else { throw Error.notReady }
+        Log.ui.info("forget: \(identity.raw, privacy: .public)")
         _ = try await store.remove(identity: identity)
         try? IconCache.delete(for: identity)
         self.remembered = await store.allRecords()
@@ -259,9 +294,14 @@ final class AppState {
     }
 
     private func handle(_ event: MountEvent) async {
+        switch event {
+        case .mounted(let url):
+            Log.mount.info("mount event: \(url.lastPathComponent, privacy: .public)")
+        case .unmounted(let url):
+            Log.mount.info("unmount event: \(url.lastPathComponent, privacy: .public)")
+        }
         await refresh()
 
-        // Smart-silent dispatch on mount events only.
         if case .mounted(let url) = event {
             await runSmartSilent(for: url)
         }
@@ -284,11 +324,10 @@ final class AppState {
         do {
             let outcome = try await smart.handle(mount: info)
             switch outcome {
-            case .nothingToDo:
-                break
+            case .nothingToDo(let reason):
+                Log.mount.debug("smart-silent: nothing to do for \(info.name, privacy: .public) — \(String(describing: reason), privacy: .public)")
             case .applied(let hash):
-                // Update lastApplied / lastAppliedHash (hash should be unchanged
-                // since we applied the exact stored bytes, but lastApplied advances).
+                Log.mount.info("smart-silent: applied cached icon to \(info.name, privacy: .public) (hash \(hash.prefix(12), privacy: .public)…)")
                 if let store, let identity = info.identity,
                    var record = await store.record(for: identity) {
                     record.lastApplied = Date()
@@ -298,13 +337,15 @@ final class AppState {
                     self.remembered = await store.allRecords()
                 }
             case .conflict(let conflict):
+                Log.mount.notice("smart-silent: CONFLICT on \(info.name, privacy: .public) — expected \(conflict.expectedHash.prefix(12), privacy: .public)…, found \(conflict.currentHash?.prefix(12) ?? "nil", privacy: .public)…")
                 if !pendingConflicts.contains(where: { $0.identity == conflict.identity }) {
                     pendingConflicts.append(conflict)
                 }
                 await ConflictNotifier.shared.postConflict(conflict)
             }
         } catch {
-            print("Sigil: smart-silent failed for \(info.name) — \(error)")
+            Log.mount.error("smart-silent failed for \(info.name, privacy: .public): \(error.localizedDescription)")
+            lastError = "Sigil couldn't automatically re-apply the icon on '\(info.name)'. \(error.localizedDescription)"
         }
     }
 
