@@ -11,9 +11,9 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** plan → **ready to gate into build**
-- **Phase:** planning (complete) → implementation (Wave 0 next)
-- **Focus:** All blockers resolved. Wave 0 = create `Sigil.xcodeproj` skeleton. Awaiting user go-ahead + preferred project-creation path (Xcode UI vs. xcodegen).
+- **Funnel:** build (Waves 0–1 done; Wave 2 next)
+- **Phase:** implementation
+- **Focus:** Wave 2 — Models + VolumeStore (JSON persistence with atomic write + .bak fallback)
 - **Status:** ready
 - **Last updated:** 2026-04-19
 
@@ -28,7 +28,7 @@
 ## Phase Progress
 
 ```
-[######..............] 30% — Discovery + Spec + Plan all complete; Wave 0 next
+[#########...........] 45% — Waves 0+1 shipped (skeleton + App Shell chrome); Wave 2 next
 ```
 
 | Phase | Status | Notes |
