@@ -11,6 +11,7 @@
 		0E4DB3B53938BB4F7DE37FED /* SigilTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19EACD2383B8E252530E6655 /* SigilTests.swift */; };
 		1B6CC8831FB4899B8BEB5477 /* VolumeInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FDA442F61D370D6E1439572 /* VolumeInfo.swift */; };
 		1CF643469901B114B9F5C17C /* IconApplier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3366B955643775D98173F4A8 /* IconApplier.swift */; };
+		20EB55B53EBEE3FE0950DF8A /* IconCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77DDCC4052D1845834016230 /* IconCache.swift */; };
 		33CBDF00AE808123AFE3F415 /* VolumeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3E3FCEF240404A5D1E7FD5 /* VolumeStore.swift */; };
 		35D7F244074221C0975B8259 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D24749E6D0EA0E7E3C731E2 /* SidebarView.swift */; };
 		375D3DF28BB330F30098BB68 /* IconApplierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19B9A375CD69CA3CE7C7E44 /* IconApplierTests.swift */; };
@@ -18,8 +19,10 @@
 		3FA4A3B1B8E189A8ECC1A71E /* TestIconFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D991C94A31929234AACA96A /* TestIconFactory.swift */; };
 		58CC1D058DE60A591E50AF9F /* IconRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7BD63D5ECD62A238F4DBBC /* IconRenderer.swift */; };
 		5C43951E3173EC4E79C68715 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894E72FB845A244E51CE7F3A /* AppPaths.swift */; };
+		60F29498F91D09330AA47B22 /* SmartSilentApplierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35035D36B81A96E24182F2C0 /* SmartSilentApplierTests.swift */; };
 		69E01C15A0C1E4C41CC70128 /* VolumeEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FBA21E63ED7C56CD3EA8266 /* VolumeEnumerator.swift */; };
 		6BD25C142EFEB877315240A6 /* SigilApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B24E0DAB90A302402EAFE10 /* SigilApp.swift */; };
+		76685E9F8AA804D4E0E7CA0B /* ConflictNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE5F62851A928FBD057865E /* ConflictNotifier.swift */; };
 		7EAD3F4F6A99D23F9AB5B321 /* VolumeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCB2A30B0730E410589936D /* VolumeDetailView.swift */; };
 		8CC1D2F35939C992FF5A59E5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6493440CFC53E0EA4100E2B0 /* Theme.swift */; };
 		8E2C621C8BE1E38A75F3C72E /* VolumeRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC80A643A448921ECDCDCBEB /* VolumeRecord.swift */; };
@@ -29,6 +32,7 @@
 		A66D67C6D2FB9CE2124DD808 /* VolumeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC0380E35A0346FA49BC895 /* VolumeRow.swift */; };
 		A8FE5B9DC0259E549B1ACA91 /* XAttr.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6957B5A5D42A217BABBF70 /* XAttr.swift */; };
 		ABD2920FA60BBEEB4F5CBD80 /* VolumeIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC18AD9DDFE8F8D9EC07FE69 /* VolumeIdentity.swift */; };
+		B28499ABDEE37914C5342E82 /* SmartSilentApplier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A27A31A98F9C9C0865EA1C /* SmartSilentApplier.swift */; };
 		C3160635C483E514017D9D1E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 498D4BC24BD7147B6C095840 /* Assets.xcassets */; };
 		C899B801AC9A67BFB50C246C /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F10C7FBC2F5942FF34BBF82 /* AppState.swift */; };
 		CC612730D762D83EF9D97FDA /* IconutilRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3398FEE3EC4B52EF027C402D /* IconutilRunner.swift */; };
@@ -55,6 +59,7 @@
 		1D24749E6D0EA0E7E3C731E2 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		3366B955643775D98173F4A8 /* IconApplier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconApplier.swift; sourceTree = "<group>"; };
 		3398FEE3EC4B52EF027C402D /* IconutilRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconutilRunner.swift; sourceTree = "<group>"; };
+		35035D36B81A96E24182F2C0 /* SmartSilentApplierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartSilentApplierTests.swift; sourceTree = "<group>"; };
 		35EEC6F774D082BB1480E062 /* SigilTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SigilTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		39EFB8419DBC83F313DA1A36 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		3B24E0DAB90A302402EAFE10 /* SigilApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigilApp.swift; sourceTree = "<group>"; };
@@ -62,6 +67,9 @@
 		3FDA442F61D370D6E1439572 /* VolumeInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeInfo.swift; sourceTree = "<group>"; };
 		498D4BC24BD7147B6C095840 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6493440CFC53E0EA4100E2B0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		70A27A31A98F9C9C0865EA1C /* SmartSilentApplier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartSilentApplier.swift; sourceTree = "<group>"; };
+		77DDCC4052D1845834016230 /* IconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconCache.swift; sourceTree = "<group>"; };
+		7CE5F62851A928FBD057865E /* ConflictNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictNotifier.swift; sourceTree = "<group>"; };
 		7D708BFF68AC96A0B741D336 /* MountWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MountWatcher.swift; sourceTree = "<group>"; };
 		894E72FB845A244E51CE7F3A /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
 		8D991C94A31929234AACA96A /* TestIconFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestIconFactory.swift; sourceTree = "<group>"; };
@@ -90,11 +98,13 @@
 				894E72FB845A244E51CE7F3A /* AppPaths.swift */,
 				3C286E526A5E942863CEE784 /* Hashing.swift */,
 				3366B955643775D98173F4A8 /* IconApplier.swift */,
+				77DDCC4052D1845834016230 /* IconCache.swift */,
 				DD7BD63D5ECD62A238F4DBBC /* IconRenderer.swift */,
 				954AB2926241BD6EFBF9F008 /* IconsetWriter.swift */,
 				3398FEE3EC4B52EF027C402D /* IconutilRunner.swift */,
 				F24696A99FAA5E6C220CF25F /* ImageNormalizer.swift */,
 				7D708BFF68AC96A0B741D336 /* MountWatcher.swift */,
+				70A27A31A98F9C9C0865EA1C /* SmartSilentApplier.swift */,
 				8D991C94A31929234AACA96A /* TestIconFactory.swift */,
 				9FBA21E63ED7C56CD3EA8266 /* VolumeEnumerator.swift */,
 				EC3E3FCEF240404A5D1E7FD5 /* VolumeStore.swift */,
@@ -109,6 +119,7 @@
 				B19B9A375CD69CA3CE7C7E44 /* IconApplierTests.swift */,
 				1C45B65B0ED307B115DEC160 /* IconRendererTests.swift */,
 				19EACD2383B8E252530E6655 /* SigilTests.swift */,
+				35035D36B81A96E24182F2C0 /* SmartSilentApplierTests.swift */,
 				E0A197241B7A982DB1724409 /* VolumeStoreTests.swift */,
 			);
 			path = SigilTests;
@@ -171,6 +182,7 @@
 			isa = PBXGroup;
 			children = (
 				9F10C7FBC2F5942FF34BBF82 /* AppState.swift */,
+				7CE5F62851A928FBD057865E /* ConflictNotifier.swift */,
 				D6A6F8D1B504ACECC6BD5344 /* FCPToolbarButtonStyle.swift */,
 				3B24E0DAB90A302402EAFE10 /* SigilApp.swift */,
 				6493440CFC53E0EA4100E2B0 /* Theme.swift */,
@@ -275,6 +287,7 @@
 				375D3DF28BB330F30098BB68 /* IconApplierTests.swift in Sources */,
 				970C087F333B5BA9C58611B6 /* IconRendererTests.swift in Sources */,
 				0E4DB3B53938BB4F7DE37FED /* SigilTests.swift in Sources */,
+				60F29498F91D09330AA47B22 /* SmartSilentApplierTests.swift in Sources */,
 				0B074EFA87EB956E2EB2BDD9 /* VolumeStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -285,11 +298,13 @@
 			files = (
 				5C43951E3173EC4E79C68715 /* AppPaths.swift in Sources */,
 				C899B801AC9A67BFB50C246C /* AppState.swift in Sources */,
+				76685E9F8AA804D4E0E7CA0B /* ConflictNotifier.swift in Sources */,
 				CD9BB099DD47CE1D1FAF2B6A /* ContentView.swift in Sources */,
 				3BE83F89B77F44BF74BBE7C4 /* FCPToolbarButtonStyle.swift in Sources */,
 				D29A40EAE4F532367493495A /* FitMode.swift in Sources */,
 				9C67E9DEA5544B589F04EA94 /* Hashing.swift in Sources */,
 				1CF643469901B114B9F5C17C /* IconApplier.swift in Sources */,
+				20EB55B53EBEE3FE0950DF8A /* IconCache.swift in Sources */,
 				58CC1D058DE60A591E50AF9F /* IconRenderer.swift in Sources */,
 				F8C725FA8A14A6D000562642 /* IconsetWriter.swift in Sources */,
 				CC612730D762D83EF9D97FDA /* IconutilRunner.swift in Sources */,
@@ -297,6 +312,7 @@
 				98204FCCED07500C3D7C338F /* MountWatcher.swift in Sources */,
 				35D7F244074221C0975B8259 /* SidebarView.swift in Sources */,
 				6BD25C142EFEB877315240A6 /* SigilApp.swift in Sources */,
+				B28499ABDEE37914C5342E82 /* SmartSilentApplier.swift in Sources */,
 				3FA4A3B1B8E189A8ECC1A71E /* TestIconFactory.swift in Sources */,
 				8CC1D2F35939C992FF5A59E5 /* Theme.swift in Sources */,
 				7EAD3F4F6A99D23F9AB5B321 /* VolumeDetailView.swift in Sources */,

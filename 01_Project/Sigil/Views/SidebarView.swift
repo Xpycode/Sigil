@@ -15,7 +15,8 @@ struct SidebarView: View {
                         VolumeRow(
                             name: info.name,
                             subtitle: info.format ?? "—",
-                            isMounted: true
+                            isMounted: true,
+                            isRemembered: isRemembered(info)
                         )
                         .tag(info.id)
                     }
@@ -30,7 +31,8 @@ struct SidebarView: View {
                         VolumeRow(
                             name: record.name,
                             subtitle: record.note.isEmpty ? "—" : record.note,
-                            isMounted: false
+                            isMounted: false,
+                            isRemembered: true  // By definition.
                         )
                         .tag(record.id)
                     }
@@ -47,5 +49,11 @@ struct SidebarView: View {
             .font(.callout)
             .foregroundStyle(Theme.tertiaryText)
             .listRowBackground(Color.clear)
+    }
+
+    /// Is this mounted volume currently in Sigil's store?
+    private func isRemembered(_ info: VolumeInfo) -> Bool {
+        guard let id = info.identity else { return false }
+        return appState.remembered.contains { $0.identity == id }
     }
 }

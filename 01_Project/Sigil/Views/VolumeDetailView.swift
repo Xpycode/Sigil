@@ -17,6 +17,9 @@ struct VolumeDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.secondaryBackground)
+        .onChange(of: appState.selectedID) { _, _ in
+            smokeStatus = nil  // Clear stale status when user selects a different volume.
+        }
     }
 
     // MARK: - States
@@ -54,6 +57,10 @@ struct VolumeDetailView: View {
                 Spacer()
             }
 
+            if let conflict = appState.selectedConflict {
+                conflictBanner(conflict)
+            }
+
             Divider().background(Theme.separator)
 
             keyValueRow("UUID", info.identity?.raw ?? "—", monospaced: true)
@@ -68,6 +75,47 @@ struct VolumeDetailView: View {
             Spacer()
         }
         .padding(24)
+    }
+
+    @ViewBuilder
+    private func conflictBanner(_ conflict: SmartSilentApplier.Outcome.Conflict) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Theme.accent)
+                Text("Icon conflict on remount")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.primaryText)
+            }
+            Text("This volume's current icon differs from what Sigil last wrote. Choose how to resolve:")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+            HStack {
+                Button("Use Sigil icon") {
+                    Task { try? await appState.resolveConflictUseSigil(identity: conflict.identity) }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
+
+                Button("Keep current") {
+                    Task { try? await appState.resolveConflictKeepCurrent(identity: conflict.identity) }
+                }
+                .buttonStyle(.bordered)
+
+                Button("Forget") {
+                    Task { try? await appState.forget(identity: conflict.identity) }
+                }
+                .buttonStyle(.bordered)
+                .foregroundStyle(.red)
+            }
+        }
+        .padding(12)
+        .background(Theme.accent.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Theme.accent.opacity(0.5), lineWidth: 1)
+        )
+        .cornerRadius(6)
     }
 
     // MARK: - Wave 5 smoke test (temporary — removed in Wave 7)
@@ -115,21 +163,19 @@ struct VolumeDetailView: View {
         do {
             let image = TestIconFactory.makeIcon(label: info.name)
             let icns = try await IconRenderer.render(image: image)
-            smokeStatus = "Writing to volume…"
-            let applier = IconApplier()
-            let hash = try await applier.apply(icns: icns, to: info.url)
-            smokeStatus = "✓ Applied. Hash: \(hash.prefix(12))…"
+            smokeStatus = "Writing to volume + persisting record…"
+            try await appState.applyRenderedIcns(icns, to: info)
+            smokeStatus = "✓ Applied + remembered. Unmount + remount to test smart-silent re-apply."
         } catch {
             smokeStatus = "✗ \(error.localizedDescription)"
         }
     }
 
     private func resetIcon(on info: VolumeInfo) async {
-        smokeStatus = "Resetting…"
+        smokeStatus = "Resetting + forgetting…"
         do {
-            let applier = IconApplier()
-            try await applier.reset(volumeURL: info.url)
-            smokeStatus = "✓ Reset. Icon & flag removed."
+            try await appState.resetIcon(for: info)
+            smokeStatus = "✓ Reset. Icon stripped, record + cache removed."
         } catch {
             smokeStatus = "✗ \(error.localizedDescription)"
         }
