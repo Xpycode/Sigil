@@ -11,14 +11,15 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** build (Waves 0–6 done; Wave 7 next — real UI on top of proven services)
+- **Funnel:** build (Waves 0–7 done; Wave 8 next — logging + error surfaces + edge cases)
 - **Phase:** implementation
-- **Focus:** Wave 7 — Full UI: icon drop zone, Fit/Fill picker, note field, action buttons, context menus, confirmation sheets
+- **Focus:** Wave 8 — os.Logger wiring, user-facing error sheets, corrupt-volumes.json recovery UI, acceptance-criteria walk-through
 - **Status:** ready
 - **Last updated:** 2026-04-19
-- **Test count:** 31 green (10 VolumeStore + 6 IconRenderer + 7 IconApplier DMG integration + 7 SmartSilent + 1 skeleton)
+- **Test count:** 31 green
 - **Spec risk:** ✅ two-step write verified on scratch DMG AND real external drive
-- **Headline feature:** ✅ smart-silent re-apply confirmed working end-to-end on real hardware
+- **Headline feature:** ✅ smart-silent re-apply confirmed working end-to-end
+- **Core UI:** ✅ drop zone, Fit/Fill, note (debounced), Apply/Reset/Forget, confirmations, sidebar thumbnails all user-verified
 
 ## Funnel Progress
 
@@ -31,7 +32,7 @@
 ## Phase Progress
 
 ```
-[#################...] 88% — Waves 0-6 shipped; headline feature confirmed working on real hardware
+[##################..] 93% — Waves 0-7 shipped; app is feature-complete. Wave 8 is polish; Wave 9 is ship.
 ```
 
 | Phase | Status | Notes |

@@ -6,13 +6,14 @@ struct VolumeRow: View {
     let subtitle: String
     let isMounted: Bool
     let isRemembered: Bool
+    /// When present, rendered in place of the SF Symbol — lets the sidebar
+    /// display the actual icon Sigil applied for each remembered volume.
+    let thumbnail: NSImage?
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: isMounted ? "externaldrive.fill" : "externaldrive")
-                .font(.system(size: 16))
-                .foregroundStyle(isMounted ? Theme.accent : Theme.secondaryText)
-                .frame(width: 22)
+            iconView
+                .frame(width: 22, height: 22)
             VStack(alignment: .leading, spacing: 1) {
                 Text(name)
                     .font(.callout)
@@ -34,5 +35,19 @@ struct VolumeRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        if let thumbnail {
+            Image(nsImage: thumbnail)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+        } else {
+            Image(systemName: isMounted ? "externaldrive.fill" : "externaldrive")
+                .font(.system(size: 16))
+                .foregroundStyle(isMounted ? Theme.accent : Theme.secondaryText)
+        }
     }
 }
