@@ -10,6 +10,7 @@
 		087B7A77C28F6FA1EF6ED132 /* ConfirmationSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF2B19144371709EBF6FAD2F /* ConfirmationSheets.swift */; };
 		0B074EFA87EB956E2EB2BDD9 /* VolumeStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0A197241B7A982DB1724409 /* VolumeStoreTests.swift */; };
 		0E4DB3B53938BB4F7DE37FED /* SigilTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19EACD2383B8E252530E6655 /* SigilTests.swift */; };
+		154EF72B868D62F3DF669BB3 /* ErrorAlerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E25B899CB5CF34AFFE6184 /* ErrorAlerts.swift */; };
 		1B6CC8831FB4899B8BEB5477 /* VolumeInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FDA442F61D370D6E1439572 /* VolumeInfo.swift */; };
 		1CF643469901B114B9F5C17C /* IconApplier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3366B955643775D98173F4A8 /* IconApplier.swift */; };
 		20EB55B53EBEE3FE0950DF8A /* IconCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77DDCC4052D1845834016230 /* IconCache.swift */; };
@@ -40,6 +41,7 @@
 		CD9BB099DD47CE1D1FAF2B6A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39EFB8419DBC83F313DA1A36 /* ContentView.swift */; };
 		D29A40EAE4F532367493495A /* FitMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD2239F3436082493D52E1A /* FitMode.swift */; };
 		DC64647CF252F3A536704463 /* ImageNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24696A99FAA5E6C220CF25F /* ImageNormalizer.swift */; };
+		F24EE7BEFA97D7C7D098DFCF /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74199C3E5E937F7162F55FFC /* Log.swift */; };
 		F8C725FA8A14A6D000562642 /* IconsetWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 954AB2926241BD6EFBF9F008 /* IconsetWriter.swift */; };
 /* End PBXBuildFile section */
 
@@ -70,6 +72,7 @@
 		498D4BC24BD7147B6C095840 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6493440CFC53E0EA4100E2B0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		70A27A31A98F9C9C0865EA1C /* SmartSilentApplier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartSilentApplier.swift; sourceTree = "<group>"; };
+		74199C3E5E937F7162F55FFC /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		77DDCC4052D1845834016230 /* IconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconCache.swift; sourceTree = "<group>"; };
 		7CE5F62851A928FBD057865E /* ConflictNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictNotifier.swift; sourceTree = "<group>"; };
 		7D708BFF68AC96A0B741D336 /* MountWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MountWatcher.swift; sourceTree = "<group>"; };
@@ -81,6 +84,7 @@
 		B19B9A375CD69CA3CE7C7E44 /* IconApplierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconApplierTests.swift; sourceTree = "<group>"; };
 		BC9B7C9339E27BD4E04B2827 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BF6957B5A5D42A217BABBF70 /* XAttr.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XAttr.swift; sourceTree = "<group>"; };
+		D5E25B899CB5CF34AFFE6184 /* ErrorAlerts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorAlerts.swift; sourceTree = "<group>"; };
 		D6A6F8D1B504ACECC6BD5344 /* FCPToolbarButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCPToolbarButtonStyle.swift; sourceTree = "<group>"; };
 		DD7BD63D5ECD62A238F4DBBC /* IconRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconRenderer.swift; sourceTree = "<group>"; };
 		DF2B19144371709EBF6FAD2F /* ConfirmationSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmationSheets.swift; sourceTree = "<group>"; };
@@ -139,6 +143,7 @@
 			isa = PBXGroup;
 			children = (
 				F31EE15A4539B6E474414149 /* App */,
+				BA730135C605567AD366B790 /* Logging */,
 				AF369FE2E9681261B902ABA1 /* Models */,
 				00C6DA0C85D3BC0EDD5169E3 /* Services */,
 				C328F5C9311CB6C69C84D04B /* Views */,
@@ -159,11 +164,20 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		BA730135C605567AD366B790 /* Logging */ = {
+			isa = PBXGroup;
+			children = (
+				74199C3E5E937F7162F55FFC /* Log.swift */,
+			);
+			path = Logging;
+			sourceTree = "<group>";
+		};
 		C328F5C9311CB6C69C84D04B /* Views */ = {
 			isa = PBXGroup;
 			children = (
 				DF2B19144371709EBF6FAD2F /* ConfirmationSheets.swift */,
 				39EFB8419DBC83F313DA1A36 /* ContentView.swift */,
+				D5E25B899CB5CF34AFFE6184 /* ErrorAlerts.swift */,
 				04F10FBD5F580B112C13B119 /* IconDropZone.swift */,
 				1D24749E6D0EA0E7E3C731E2 /* SidebarView.swift */,
 				1CCB2A30B0730E410589936D /* VolumeDetailView.swift */,
@@ -304,6 +318,7 @@
 				087B7A77C28F6FA1EF6ED132 /* ConfirmationSheets.swift in Sources */,
 				76685E9F8AA804D4E0E7CA0B /* ConflictNotifier.swift in Sources */,
 				CD9BB099DD47CE1D1FAF2B6A /* ContentView.swift in Sources */,
+				154EF72B868D62F3DF669BB3 /* ErrorAlerts.swift in Sources */,
 				3BE83F89B77F44BF74BBE7C4 /* FCPToolbarButtonStyle.swift in Sources */,
 				D29A40EAE4F532367493495A /* FitMode.swift in Sources */,
 				9C67E9DEA5544B589F04EA94 /* Hashing.swift in Sources */,
@@ -314,6 +329,7 @@
 				F8C725FA8A14A6D000562642 /* IconsetWriter.swift in Sources */,
 				CC612730D762D83EF9D97FDA /* IconutilRunner.swift in Sources */,
 				DC64647CF252F3A536704463 /* ImageNormalizer.swift in Sources */,
+				F24EE7BEFA97D7C7D098DFCF /* Log.swift in Sources */,
 				98204FCCED07500C3D7C338F /* MountWatcher.swift in Sources */,
 				35D7F244074221C0975B8259 /* SidebarView.swift in Sources */,
 				6BD25C142EFEB877315240A6 /* SigilApp.swift in Sources */,

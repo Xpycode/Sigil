@@ -11,15 +11,13 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** build (Waves 0–7 done; Wave 8 next — logging + error surfaces + edge cases)
-- **Phase:** implementation
-- **Focus:** Wave 8 — os.Logger wiring, user-facing error sheets, corrupt-volumes.json recovery UI, acceptance-criteria walk-through
+- **Funnel:** build (Waves 0–8 done; Wave 9 next — polish + ship)
+- **Phase:** implementation → shipping
+- **Focus:** Wave 9 — App icon design, README, LICENSE, notarization, DMG, GitHub release
 - **Status:** ready
 - **Last updated:** 2026-04-19
 - **Test count:** 31 green
-- **Spec risk:** ✅ two-step write verified on scratch DMG AND real external drive
-- **Headline feature:** ✅ smart-silent re-apply confirmed working end-to-end
-- **Core UI:** ✅ drop zone, Fit/Fill, note (debounced), Apply/Reset/Forget, confirmations, sidebar thumbnails all user-verified
+- **Production seams:** ✅ os.Logger wired (mount/io/render/ui categories), corrupt-store recovery surfaces alert, background-failure paths funnel to user-visible error
 
 ## Funnel Progress
 
@@ -32,7 +30,7 @@
 ## Phase Progress
 
 ```
-[##################..] 93% — Waves 0-7 shipped; app is feature-complete. Wave 8 is polish; Wave 9 is ship.
+[###################.] 97% — Waves 0-8 shipped; only Wave 9 (design + notarize + ship) remains
 ```
 
 | Phase | Status | Notes |
