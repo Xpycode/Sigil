@@ -9,16 +9,21 @@
 /* Begin PBXBuildFile section */
 		0B074EFA87EB956E2EB2BDD9 /* VolumeStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0A197241B7A982DB1724409 /* VolumeStoreTests.swift */; };
 		0E4DB3B53938BB4F7DE37FED /* SigilTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19EACD2383B8E252530E6655 /* SigilTests.swift */; };
+		1B6CC8831FB4899B8BEB5477 /* VolumeInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FDA442F61D370D6E1439572 /* VolumeInfo.swift */; };
 		33CBDF00AE808123AFE3F415 /* VolumeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3E3FCEF240404A5D1E7FD5 /* VolumeStore.swift */; };
 		35D7F244074221C0975B8259 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D24749E6D0EA0E7E3C731E2 /* SidebarView.swift */; };
 		3BE83F89B77F44BF74BBE7C4 /* FCPToolbarButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6A6F8D1B504ACECC6BD5344 /* FCPToolbarButtonStyle.swift */; };
 		5C43951E3173EC4E79C68715 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894E72FB845A244E51CE7F3A /* AppPaths.swift */; };
+		69E01C15A0C1E4C41CC70128 /* VolumeEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FBA21E63ED7C56CD3EA8266 /* VolumeEnumerator.swift */; };
 		6BD25C142EFEB877315240A6 /* SigilApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B24E0DAB90A302402EAFE10 /* SigilApp.swift */; };
 		7EAD3F4F6A99D23F9AB5B321 /* VolumeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCB2A30B0730E410589936D /* VolumeDetailView.swift */; };
 		8CC1D2F35939C992FF5A59E5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6493440CFC53E0EA4100E2B0 /* Theme.swift */; };
 		8E2C621C8BE1E38A75F3C72E /* VolumeRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC80A643A448921ECDCDCBEB /* VolumeRecord.swift */; };
+		98204FCCED07500C3D7C338F /* MountWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D708BFF68AC96A0B741D336 /* MountWatcher.swift */; };
+		A66D67C6D2FB9CE2124DD808 /* VolumeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC0380E35A0346FA49BC895 /* VolumeRow.swift */; };
 		ABD2920FA60BBEEB4F5CBD80 /* VolumeIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC18AD9DDFE8F8D9EC07FE69 /* VolumeIdentity.swift */; };
 		C3160635C483E514017D9D1E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 498D4BC24BD7147B6C095840 /* Assets.xcassets */; };
+		C899B801AC9A67BFB50C246C /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F10C7FBC2F5942FF34BBF82 /* AppState.swift */; };
 		CD9BB099DD47CE1D1FAF2B6A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39EFB8419DBC83F313DA1A36 /* ContentView.swift */; };
 		D29A40EAE4F532367493495A /* FitMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD2239F3436082493D52E1A /* FitMode.swift */; };
 /* End PBXBuildFile section */
@@ -40,9 +45,13 @@
 		35EEC6F774D082BB1480E062 /* SigilTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SigilTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		39EFB8419DBC83F313DA1A36 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		3B24E0DAB90A302402EAFE10 /* SigilApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigilApp.swift; sourceTree = "<group>"; };
+		3FDA442F61D370D6E1439572 /* VolumeInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeInfo.swift; sourceTree = "<group>"; };
 		498D4BC24BD7147B6C095840 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6493440CFC53E0EA4100E2B0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7D708BFF68AC96A0B741D336 /* MountWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MountWatcher.swift; sourceTree = "<group>"; };
 		894E72FB845A244E51CE7F3A /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
+		9F10C7FBC2F5942FF34BBF82 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		9FBA21E63ED7C56CD3EA8266 /* VolumeEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeEnumerator.swift; sourceTree = "<group>"; };
 		ADD2239F3436082493D52E1A /* FitMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitMode.swift; sourceTree = "<group>"; };
 		BC9B7C9339E27BD4E04B2827 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D6A6F8D1B504ACECC6BD5344 /* FCPToolbarButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCPToolbarButtonStyle.swift; sourceTree = "<group>"; };
@@ -51,6 +60,7 @@
 		EC18AD9DDFE8F8D9EC07FE69 /* VolumeIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeIdentity.swift; sourceTree = "<group>"; };
 		EC3E3FCEF240404A5D1E7FD5 /* VolumeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeStore.swift; sourceTree = "<group>"; };
 		EC80A643A448921ECDCDCBEB /* VolumeRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeRecord.swift; sourceTree = "<group>"; };
+		FEC0380E35A0346FA49BC895 /* VolumeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeRow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -58,6 +68,8 @@
 			isa = PBXGroup;
 			children = (
 				894E72FB845A244E51CE7F3A /* AppPaths.swift */,
+				7D708BFF68AC96A0B741D336 /* MountWatcher.swift */,
+				9FBA21E63ED7C56CD3EA8266 /* VolumeEnumerator.swift */,
 				EC3E3FCEF240404A5D1E7FD5 /* VolumeStore.swift */,
 			);
 			path = Services;
@@ -99,6 +111,7 @@
 			children = (
 				ADD2239F3436082493D52E1A /* FitMode.swift */,
 				EC18AD9DDFE8F8D9EC07FE69 /* VolumeIdentity.swift */,
+				3FDA442F61D370D6E1439572 /* VolumeInfo.swift */,
 				EC80A643A448921ECDCDCBEB /* VolumeRecord.swift */,
 			);
 			path = Models;
@@ -110,6 +123,7 @@
 				39EFB8419DBC83F313DA1A36 /* ContentView.swift */,
 				1D24749E6D0EA0E7E3C731E2 /* SidebarView.swift */,
 				1CCB2A30B0730E410589936D /* VolumeDetailView.swift */,
+				FEC0380E35A0346FA49BC895 /* VolumeRow.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -126,6 +140,7 @@
 		F31EE15A4539B6E474414149 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				9F10C7FBC2F5942FF34BBF82 /* AppState.swift */,
 				D6A6F8D1B504ACECC6BD5344 /* FCPToolbarButtonStyle.swift */,
 				3B24E0DAB90A302402EAFE10 /* SigilApp.swift */,
 				6493440CFC53E0EA4100E2B0 /* Theme.swift */,
@@ -237,15 +252,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C43951E3173EC4E79C68715 /* AppPaths.swift in Sources */,
+				C899B801AC9A67BFB50C246C /* AppState.swift in Sources */,
 				CD9BB099DD47CE1D1FAF2B6A /* ContentView.swift in Sources */,
 				3BE83F89B77F44BF74BBE7C4 /* FCPToolbarButtonStyle.swift in Sources */,
 				D29A40EAE4F532367493495A /* FitMode.swift in Sources */,
+				98204FCCED07500C3D7C338F /* MountWatcher.swift in Sources */,
 				35D7F244074221C0975B8259 /* SidebarView.swift in Sources */,
 				6BD25C142EFEB877315240A6 /* SigilApp.swift in Sources */,
 				8CC1D2F35939C992FF5A59E5 /* Theme.swift in Sources */,
 				7EAD3F4F6A99D23F9AB5B321 /* VolumeDetailView.swift in Sources */,
+				69E01C15A0C1E4C41CC70128 /* VolumeEnumerator.swift in Sources */,
 				ABD2920FA60BBEEB4F5CBD80 /* VolumeIdentity.swift in Sources */,
+				1B6CC8831FB4899B8BEB5477 /* VolumeInfo.swift in Sources */,
 				8E2C621C8BE1E38A75F3C72E /* VolumeRecord.swift in Sources */,
+				A66D67C6D2FB9CE2124DD808 /* VolumeRow.swift in Sources */,
 				33CBDF00AE808123AFE3F415 /* VolumeStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

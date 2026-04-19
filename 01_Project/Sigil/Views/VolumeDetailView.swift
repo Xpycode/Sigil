@@ -1,8 +1,27 @@
 import SwiftUI
 
-/// Wave 1 placeholder. Empty-state polish + editor wired in Wave 7.
+/// Wave 3: shows basic info for the selected volume so selection is visible.
+/// Full editor (icon drop, Fit/Fill, note, action buttons) wired in Wave 7.
 struct VolumeDetailView: View {
+    @Environment(AppState.self) private var appState
+
     var body: some View {
+        Group {
+            if let info = appState.selectedMounted {
+                mountedDetail(info)
+            } else if let record = appState.selectedRemembered {
+                rememberedDetail(record)
+            } else {
+                emptyState
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.secondaryBackground)
+    }
+
+    // MARK: - States
+
+    private var emptyState: some View {
         VStack(spacing: 18) {
             Image(systemName: "externaldrive.badge.plus")
                 .font(.system(size: 72, weight: .light))
@@ -16,13 +35,94 @@ struct VolumeDetailView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.secondaryBackground)
     }
-}
 
-#Preview {
-    VolumeDetailView()
-        .frame(width: 600, height: 480)
-        .preferredColorScheme(.dark)
+    private func mountedDetail(_ info: VolumeInfo) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                Image(systemName: "externaldrive.fill")
+                    .font(.system(size: 56, weight: .light))
+                    .foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(info.name)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Theme.primaryText)
+                    Text(info.format ?? "—")
+                        .font(.callout)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer()
+            }
+
+            Divider().background(Theme.separator)
+
+            keyValueRow("UUID", info.identity?.raw ?? "—", monospaced: true)
+            keyValueRow("Mount", info.url.path)
+            keyValueRow("Capacity", Self.formatBytes(info.capacityBytes))
+            keyValueRow("Type", info.typeLabel)
+
+            Spacer()
+
+            Text("Wave 7 will add the icon editor, Fit/Fill toggle, note, and Apply / Reset / Forget actions here.")
+                .font(.caption)
+                .foregroundStyle(Theme.tertiaryText)
+                .padding(.top, 4)
+        }
+        .padding(24)
+    }
+
+    private func rememberedDetail(_ record: VolumeRecord) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                Image(systemName: "externaldrive")
+                    .font(.system(size: 56, weight: .light))
+                    .foregroundStyle(Theme.secondaryText)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(record.name)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Theme.primaryText)
+                    Text("Not mounted")
+                        .font(.callout)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer()
+            }
+
+            Divider().background(Theme.separator)
+
+            keyValueRow("UUID", record.identity.raw, monospaced: true)
+            keyValueRow("Note", record.note.isEmpty ? "—" : record.note)
+            keyValueRow("Last seen", record.lastSeen.formatted(date: .abbreviated, time: .shortened))
+            if let applied = record.lastApplied {
+                keyValueRow("Last applied", applied.formatted(date: .abbreviated, time: .shortened))
+            }
+
+            Spacer()
+        }
+        .padding(24)
+    }
+
+    // MARK: - Helpers
+
+    private func keyValueRow(_ key: String, _ value: String, monospaced: Bool = false) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(key)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+                .frame(width: 96, alignment: .trailing)
+            Text(value)
+                .font(monospaced ? .system(.callout, design: .monospaced) : .callout)
+                .foregroundStyle(Theme.primaryText)
+                .textSelection(.enabled)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private static func formatBytes(_ bytes: Int?) -> String {
+        guard let bytes else { return "—" }
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useGB, .useTB, .useMB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
 }

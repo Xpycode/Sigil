@@ -1,41 +1,51 @@
 import SwiftUI
 
-/// Wave 1 placeholder. Live volume sections wired in Wave 3.
 struct SidebarView: View {
+    @Environment(AppState.self) private var appState
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            sectionHeader("Mounted")
-            placeholderRow("(no mounted volumes)")
+        @Bindable var appState = appState
 
-            sectionHeader("Remembered")
-            placeholderRow("(no remembered volumes)")
+        List(selection: $appState.selectedID) {
+            Section("Mounted") {
+                if appState.mounted.isEmpty {
+                    emptyRow("(no mounted volumes)")
+                } else {
+                    ForEach(appState.mounted) { info in
+                        VolumeRow(
+                            name: info.name,
+                            subtitle: info.format ?? "—",
+                            isMounted: true
+                        )
+                        .tag(info.id)
+                    }
+                }
+            }
 
-            Spacer()
+            Section("Remembered") {
+                if appState.rememberedNotMounted.isEmpty {
+                    emptyRow("(no remembered volumes)")
+                } else {
+                    ForEach(appState.rememberedNotMounted) { record in
+                        VolumeRow(
+                            name: record.name,
+                            subtitle: record.note.isEmpty ? "—" : record.note,
+                            isMounted: false
+                        )
+                        .tag(record.id)
+                    }
+                }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
         .background(Theme.primaryBackground)
     }
 
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(Theme.secondaryText)
-            .padding(.horizontal, 12)
-            .padding(.top, 16)
-            .padding(.bottom, 4)
-    }
-
-    private func placeholderRow(_ text: String) -> some View {
+    private func emptyRow(_ text: String) -> some View {
         Text(text)
             .font(.callout)
             .foregroundStyle(Theme.tertiaryText)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 4)
+            .listRowBackground(Color.clear)
     }
-}
-
-#Preview {
-    SidebarView()
-        .frame(width: 280, height: 480)
-        .preferredColorScheme(.dark)
 }
