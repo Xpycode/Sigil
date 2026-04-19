@@ -11,13 +11,14 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** build (Waves 0–5 done, including the critical risk wave; Wave 6 next)
+- **Funnel:** build (Waves 0–6 done; Wave 7 next — real UI on top of proven services)
 - **Phase:** implementation
-- **Focus:** Wave 6 — ViewModels + smart-silent reapply orchestration
+- **Focus:** Wave 7 — Full UI: icon drop zone, Fit/Fill picker, note field, action buttons, context menus, confirmation sheets
 - **Status:** ready
 - **Last updated:** 2026-04-19
-- **Test count:** 24 green (incl. 7 real-APFS integration tests)
-- **Spec risk:** ✅ two-step write verified on scratch DMG AND real external drive (user-confirmed)
+- **Test count:** 31 green (10 VolumeStore + 6 IconRenderer + 7 IconApplier DMG integration + 7 SmartSilent + 1 skeleton)
+- **Spec risk:** ✅ two-step write verified on scratch DMG AND real external drive
+- **Headline feature:** ✅ smart-silent re-apply confirmed working end-to-end on real hardware
 
 ## Funnel Progress
 
@@ -30,7 +31,7 @@
 ## Phase Progress
 
 ```
-[################....] 83% — Waves 0-5 shipped (core risk proven end-to-end); Wave 6 next (orchestration)
+[#################...] 88% — Waves 0-6 shipped; headline feature confirmed working on real hardware
 ```
 
 | Phase | Status | Notes |

@@ -5,6 +5,7 @@ struct VolumeRow: View {
     let name: String
     let subtitle: String
     let isMounted: Bool
+    let isRemembered: Bool
 
     var body: some View {
         HStack(spacing: 10) {
@@ -25,6 +26,12 @@ struct VolumeRow: View {
                 }
             }
             Spacer(minLength: 0)
+            if isRemembered {
+                Circle()
+                    .fill(Theme.accent)
+                    .frame(width: 6, height: 6)
+                    .help("Remembered by Sigil")
+            }
         }
         .padding(.vertical, 2)
     }
