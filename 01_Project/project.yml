@@ -19,8 +19,7 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     DEAD_CODE_STRIPPING: YES
     CODE_SIGN_STYLE: Automatic
-    CODE_SIGN_IDENTITY: "-"
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: FDMSRXXN73
     SWIFT_STRICT_CONCURRENCY: targeted
     GCC_TREAT_WARNINGS_AS_ERRORS: NO
     SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
@@ -29,9 +28,14 @@ settings:
       ONLY_ACTIVE_ARCH: YES
       SWIFT_OPTIMIZATION_LEVEL: "-Onone"
       ENABLE_HARDENED_RUNTIME: NO
+      # Ad-hoc sign for local dev so we don't need a cert for every build.
+      CODE_SIGN_IDENTITY: "-"
     Release:
       SWIFT_OPTIMIZATION_LEVEL: "-O"
       ENABLE_HARDENED_RUNTIME: YES
+      # Direct-distribution signing (Developer ID, NOT "Apple Distribution" —
+      # "Apple Distribution" is for the Mac App Store).
+      CODE_SIGN_IDENTITY: "Developer ID Application"
 
 targets:
   Sigil:
@@ -51,7 +55,8 @@ targets:
         CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
         CFBundlePackageType: APPL
         LSMinimumSystemVersion: "14.0"
-        NSHumanReadableCopyright: "© 2026 Luces Umbrarum"
+        LSApplicationCategoryType: public.app-category.utilities
+        NSHumanReadableCopyright: "Copyright © 2026 Luces Umbrarum. All rights reserved."
         UIDesignRequiresCompatibility: true
     settings:
       base:
