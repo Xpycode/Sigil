@@ -11,12 +11,12 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** build (Waves 0–3 done; Wave 4 next)
+- **Funnel:** build (Waves 0–4 done; Wave 5 next — the critical risk wave)
 - **Phase:** implementation
-- **Focus:** Wave 4 — Icon rendering pipeline (`iconutil` subprocess wrapping)
+- **Focus:** Wave 5 — IconApplier (xattr + atomic write to `/Volumes/X/.VolumeIcon.icns`), the central spec risk
 - **Status:** ready
 - **Last updated:** 2026-04-19
-- **Test count:** 11 green
+- **Test count:** 17 green
 
 ## Funnel Progress
 
@@ -29,7 +29,7 @@
 ## Phase Progress
 
 ```
-[#############.......] 63% — Waves 0-3 shipped (skeleton + chrome + persistence + live sidebar); Wave 4 next
+[###############.....] 73% — Waves 0-4 shipped (+ icon rendering pipeline); Wave 5 is the xattr risk wave
 ```
 
 | Phase | Status | Notes |
