@@ -11,11 +11,12 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** build (Waves 0–1 done; Wave 2 next)
+- **Funnel:** build (Waves 0–3 done; Wave 4 next)
 - **Phase:** implementation
-- **Focus:** Wave 2 — Models + VolumeStore (JSON persistence with atomic write + .bak fallback)
+- **Focus:** Wave 4 — Icon rendering pipeline (`iconutil` subprocess wrapping)
 - **Status:** ready
 - **Last updated:** 2026-04-19
+- **Test count:** 11 green
 
 ## Funnel Progress
 
@@ -28,7 +29,7 @@
 ## Phase Progress
 
 ```
-[#########...........] 45% — Waves 0+1 shipped (skeleton + App Shell chrome); Wave 2 next
+[#############.......] 63% — Waves 0-3 shipped (skeleton + chrome + persistence + live sidebar); Wave 4 next
 ```
 
 | Phase | Status | Notes |

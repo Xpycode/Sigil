@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("showSidebar") private var showSidebar: Bool = true
-    @AppStorage("showAllVolumes") private var showAllVolumes: Bool = false
+    @Environment(AppState.self) private var appState
 
     var body: some View {
+        @Bindable var appState = appState
+
         HSplitView {
             if showSidebar {
                 SidebarView()
@@ -25,7 +27,7 @@ struct ContentView: View {
             }
             ToolbarItemGroup(placement: .primaryAction) {
                 PaneToggleButton(
-                    isOn: $showAllVolumes,
+                    isOn: $appState.showAllVolumes,
                     iconName: "eye",
                     help: "Show All Volumes (incl. system, DMGs)"
                 )
@@ -33,10 +35,4 @@ struct ContentView: View {
         }
         .toolbarRole(.editor)
     }
-}
-
-#Preview {
-    ContentView()
-        .frame(width: 900, height: 600)
-        .preferredColorScheme(.dark)
 }
