@@ -1,0 +1,101 @@
+name: Sigil
+
+options:
+  bundleIdPrefix: com.lucesumbrarum
+  deploymentTarget:
+    macOS: "14.0"
+  developmentLanguage: en
+  defaultConfig: Debug
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    DEAD_CODE_STRIPPING: YES
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    SWIFT_STRICT_CONCURRENCY: targeted
+    GCC_TREAT_WARNINGS_AS_ERRORS: NO
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+  configs:
+    Debug:
+      ONLY_ACTIVE_ARCH: YES
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      ENABLE_HARDENED_RUNTIME: NO
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+      ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+  Sigil:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sigil
+    info:
+      path: Sigil/Info.plist
+      properties:
+        CFBundleDisplayName: Sigil
+        CFBundleName: Sigil
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundlePackageType: APPL
+        LSMinimumSystemVersion: "14.0"
+        NSHumanReadableCopyright: "© 2026 Luces Umbrarum"
+        UIDesignRequiresCompatibility: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lucesumbrarum.sigil
+        PRODUCT_NAME: Sigil
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_PREVIEWS: YES
+        COMBINE_HIDPI_IMAGES: YES
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+
+  SigilTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: SigilTests
+    dependencies:
+      - target: Sigil
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lucesumbrarum.sigil.tests
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Sigil.app/Contents/MacOS/Sigil
+
+schemes:
+  Sigil:
+    build:
+      targets:
+        Sigil: all
+        SigilTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - SigilTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
