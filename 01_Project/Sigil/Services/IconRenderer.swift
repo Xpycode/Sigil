@@ -11,15 +11,29 @@ import AppKit
 enum IconRenderer {
 
     /// Produce `.icns` data from the given source image.
-    static func render(source: URL, mode: FitMode) async throws -> Data {
-        // Passthrough: user dropped an existing .icns.
+    static func render(source: URL, mode: FitMode, zoom: Double = 1.0) async throws -> Data {
+        // Passthrough: user dropped an existing .icns (zoom ignored — .icns is already rasterized).
         if source.pathExtension.lowercased() == "icns" {
             return try Data(contentsOf: source)
         }
 
         // Full pipeline.
-        let image = try ImageNormalizer.normalize(source: source, mode: mode)
+        let image = try ImageNormalizer.normalize(source: source, mode: mode, zoom: zoom)
         return try await renderInternal(image: image)
+    }
+
+    /// Fast preview path: returns the normalized 1024×1024 `NSImage` without
+    /// running `iconutil`. Use this for live slider feedback — skips the
+    /// subprocess cost (~300 ms) by stopping at the in-memory image.
+    /// For `.icns` passthrough, returns a decoded representation directly.
+    static func preview(source: URL, mode: FitMode, zoom: Double) throws -> NSImage {
+        if source.pathExtension.lowercased() == "icns" {
+            guard let image = NSImage(contentsOf: source) else {
+                throw ImageNormalizer.Error.unreadable(source)
+            }
+            return image
+        }
+        return try ImageNormalizer.normalize(source: source, mode: mode, zoom: zoom)
     }
 
     /// Produce `.icns` data directly from an in-memory `NSImage` — used for

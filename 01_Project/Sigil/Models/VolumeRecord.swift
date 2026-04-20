@@ -23,8 +23,12 @@ struct VolumeRecord: Codable, Sendable, Hashable, Identifiable {
     /// smart-silent reapply / conflict detection on remount.
     var lastAppliedHash: String?
 
-    /// Fit/Fill mode chosen by the user when the source image was imported.
+    /// Fit/Fill mode chosen by the user — the base framing. `zoom` scales on top.
     var fitMode: FitMode
+
+    /// Zoom factor applied on top of `fitMode`'s base rect. 1.0 = base framing,
+    /// values >1 crop in further, values <1 add letterbox padding.
+    var zoom: Double
 
     /// Original filename of the imported source (for display only).
     var sourceFilename: String?
@@ -39,6 +43,7 @@ struct VolumeRecord: Codable, Sendable, Hashable, Identifiable {
         lastApplied: Date? = nil,
         lastAppliedHash: String? = nil,
         fitMode: FitMode = .fit,
+        zoom: Double = 1.0,
         sourceFilename: String? = nil
     ) {
         self.identity = identity
@@ -48,11 +53,12 @@ struct VolumeRecord: Codable, Sendable, Hashable, Identifiable {
         self.lastApplied = lastApplied
         self.lastAppliedHash = lastAppliedHash
         self.fitMode = fitMode
+        self.zoom = zoom
         self.sourceFilename = sourceFilename
     }
 
     private enum CodingKeys: String, CodingKey {
-        case uuid, name, note, lastSeen, lastApplied, lastAppliedHash, fitMode, sourceFilename
+        case uuid, name, note, lastSeen, lastApplied, lastAppliedHash, fitMode, zoom, sourceFilename
     }
 
     init(from decoder: Decoder) throws {
@@ -64,6 +70,7 @@ struct VolumeRecord: Codable, Sendable, Hashable, Identifiable {
         self.lastApplied = try c.decodeIfPresent(Date.self, forKey: .lastApplied)
         self.lastAppliedHash = try c.decodeIfPresent(String.self, forKey: .lastAppliedHash)
         self.fitMode = try c.decodeIfPresent(FitMode.self, forKey: .fitMode) ?? .fit
+        self.zoom = try c.decodeIfPresent(Double.self, forKey: .zoom) ?? 1.0
         self.sourceFilename = try c.decodeIfPresent(String.self, forKey: .sourceFilename)
     }
 
@@ -76,6 +83,7 @@ struct VolumeRecord: Codable, Sendable, Hashable, Identifiable {
         try c.encodeIfPresent(lastApplied, forKey: .lastApplied)
         try c.encodeIfPresent(lastAppliedHash, forKey: .lastAppliedHash)
         try c.encode(fitMode, forKey: .fitMode)
+        try c.encode(zoom, forKey: .zoom)
         try c.encodeIfPresent(sourceFilename, forKey: .sourceFilename)
     }
 }

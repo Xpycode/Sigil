@@ -145,14 +145,14 @@ final class AppState {
 
     /// Apply a user-provided source image as the volume's custom icon.
     /// Full pipeline: render → cache → write to volume → persist record.
-    func applyIcon(source: URL, mode: FitMode, to info: VolumeInfo) async throws {
+    func applyIcon(source: URL, mode: FitMode, zoom: Double, to info: VolumeInfo) async throws {
         guard let identity = info.identity else { throw Error.noIdentity }
         guard let store else { throw Error.notReady }
 
-        let icns = try await IconRenderer.render(source: source, mode: mode)
+        let icns = try await IconRenderer.render(source: source, mode: mode, zoom: zoom)
         try await applyRendered(
             icns: icns, info: info, identity: identity,
-            fitMode: mode, sourceFilename: source.lastPathComponent,
+            fitMode: mode, zoom: zoom, sourceFilename: source.lastPathComponent,
             cacheSource: source, store: store
         )
     }
@@ -163,7 +163,7 @@ final class AppState {
         guard let store else { throw Error.notReady }
         try await applyRendered(
             icns: icns, info: info, identity: identity,
-            fitMode: labelMode, sourceFilename: nil,
+            fitMode: labelMode, zoom: 1.0, sourceFilename: nil,
             cacheSource: nil, store: store
         )
     }
@@ -173,11 +173,12 @@ final class AppState {
         info: VolumeInfo,
         identity: VolumeIdentity,
         fitMode: FitMode,
+        zoom: Double,
         sourceFilename: String?,
         cacheSource: URL?,
         store: VolumeStore
     ) async throws {
-        Log.ui.info("apply: \(info.name, privacy: .public) (mode: \(fitMode.rawValue, privacy: .public), \(icns.count, privacy: .public) bytes)")
+        Log.ui.info("apply: \(info.name, privacy: .public) (mode: \(fitMode.rawValue, privacy: .public), zoom: \(zoom, privacy: .public), \(icns.count, privacy: .public) bytes)")
 
         try IconCache.saveIcns(icns, for: identity)
         if let cacheSource {
@@ -195,6 +196,7 @@ final class AppState {
             lastApplied: Date(),
             lastAppliedHash: hash,
             fitMode: fitMode,
+            zoom: zoom,
             sourceFilename: sourceFilename ?? existing?.sourceFilename
         )
         try await store.upsert(record)
