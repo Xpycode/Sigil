@@ -32,39 +32,30 @@ struct IconDropZone: View {
     ]
 
     var body: some View {
-        VStack(spacing: 10) {
+        Button { showPicker = true } label: {
             zone
                 .frame(width: 200, height: 200)
-                .dropDestination(for: URL.self) { urls, _ in
-                    guard let url = urls.first else { return false }
-                    pendingSource = url
-                    return true
-                } isTargeted: { targeted in
-                    isTargeted = targeted
-                }
-
-            HStack(spacing: 8) {
-                Spacer()
-                Button("Browse…") { showPicker = true }
-                    .buttonStyle(.bordered)
-                    .fileImporter(
-                        isPresented: $showPicker,
-                        allowedContentTypes: Self.allowedImageTypes,
-                        allowsMultipleSelection: false
-                    ) { result in
-                        if case .success(let urls) = result, let url = urls.first {
-                            pendingSource = url
-                        }
-                    }
-
-                if pendingSource != nil {
-                    Button("Clear") { pendingSource = nil }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(Theme.secondaryText)
-                }
-                Spacer()
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+        .fileImporter(
+            isPresented: $showPicker,
+            allowedContentTypes: Self.allowedImageTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                pendingSource = url
             }
-            .frame(width: 200)
+        }
+        .dropDestination(for: URL.self) { urls, _ in
+            guard let url = urls.first else { return false }
+            pendingSource = url
+            return true
+        } isTargeted: { targeted in
+            isTargeted = targeted
         }
     }
 
@@ -86,8 +77,29 @@ struct IconDropZone: View {
 
             content
                 .padding(contentPadding)
+
+            if pendingSource != nil {
+                clearButton
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(8)
+            }
         }
         .animation(.easeInOut(duration: 0.15), value: isTargeted)
+    }
+
+    /// Small overlay button that clears `pendingSource`. Lives *inside* the
+    /// zone's ZStack so it sits on top of the preview image; because it's a
+    /// `Button`, it swallows its own hit and won't trigger the parent
+    /// click-to-browse action.
+    private var clearButton: some View {
+        Button { pendingSource = nil } label: {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 20, weight: .regular))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(Theme.secondaryText, Theme.elevatedBackground.opacity(0.9))
+        }
+        .buttonStyle(.plain)
+        .help("Clear")
     }
 
     /// Empty state needs breathing room around the prompt text; when there's
@@ -103,6 +115,7 @@ struct IconDropZone: View {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 if isTargeted {
                     Text("Drop to replace")
                         .font(.caption)
@@ -119,7 +132,7 @@ struct IconDropZone: View {
                 Image(systemName: "square.and.arrow.down")
                     .font(.system(size: 34, weight: .light))
                     .foregroundStyle(Theme.accent)
-                Text("Drop image here")
+                Text("Drop or click to browse")
                     .font(.callout)
                     .foregroundStyle(Theme.secondaryText)
                 Text("PNG · JPEG · HEIC · ICNS")
