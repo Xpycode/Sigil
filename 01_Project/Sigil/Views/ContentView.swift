@@ -10,10 +10,10 @@ struct ContentView: View {
         HSplitView {
             if showSidebar {
                 SidebarView()
-                    .frame(minWidth: 220, idealWidth: 280, maxWidth: 480)
+                    .frame(minWidth: 200, idealWidth: 240, maxWidth: 300)
             }
             VolumeDetailView()
-                .frame(minWidth: 440)
+                .frame(minWidth: 500)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.primaryBackground)

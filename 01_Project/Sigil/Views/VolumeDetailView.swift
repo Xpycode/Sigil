@@ -6,11 +6,12 @@ struct VolumeDetailView: View {
 
     // Editor state — reset on selection change via `.id(...)` on the parent Group.
     @State private var pendingSource: URL? = nil
+    @State private var cachedSource: URL? = nil
     @State private var pendingMode: FitMode = .fit
+    @State private var pendingZoom: Double = 1.0
     @State private var pendingNote: String = ""
     @State private var previewImage: NSImage? = nil
     @State private var currentIcon: NSImage? = nil
-    @State private var previewTask: Task<Void, Never>? = nil
     @State private var noteDebounceTask: Task<Void, Never>? = nil
 
     @State private var isApplying: Bool = false
@@ -58,45 +59,23 @@ struct VolumeDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
             header(info)
 
+            metadata(info)
+
             if let conflict = appState.selectedConflict {
                 conflictBanner(conflict)
             }
 
             Divider().background(Theme.separator)
 
-            metadata(info)
-
-            Divider().background(Theme.separator)
-
             editor(info)
 
             Spacer()
-
-            actionRow(info)
-
-            if let status = statusMessage {
-                Text(status)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(Theme.secondaryText)
-                    .transition(.opacity)
-            }
-            if let err = errorMessage {
-                Text(err)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.red)
-                    .transition(.opacity)
-            }
         }
         .padding(24)
         .task(id: info.id) { loadInitialState(for: info) }
-        .onChange(of: pendingSource) { _, newValue in
-            renderPreview(source: newValue, mode: pendingMode)
-        }
-        .onChange(of: pendingMode) { _, _ in
-            if let src = pendingSource {
-                renderPreview(source: src, mode: pendingMode)
-            }
-        }
+        .onChange(of: pendingSource) { _, _ in renderPreview() }
+        .onChange(of: pendingMode) { _, _ in renderPreview() }
+        .onChange(of: pendingZoom) { _, _ in renderPreview() }
         .onChange(of: pendingNote) { _, newValue in
             scheduleNoteSave(info: info, note: newValue)
         }
@@ -205,11 +184,24 @@ struct VolumeDetailView: View {
     }
 
     private func metadata(_ info: VolumeInfo) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            keyValueRow("UUID", info.identity?.raw ?? "—", monospaced: true)
-            keyValueRow("Mount", info.url.path)
-            keyValueRow("Type", info.typeLabel)
+        HStack(spacing: 6) {
+            Text(info.identity?.raw ?? "—")
+                .font(.system(.caption, design: .monospaced))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+            Text("·").foregroundStyle(Theme.tertiaryText)
+            Text(info.url.path)
+                .font(.caption)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+            Text("·").foregroundStyle(Theme.tertiaryText)
+            Text(info.typeLabel)
+                .font(.caption)
+            Spacer(minLength: 0)
         }
+        .foregroundStyle(Theme.secondaryText)
     }
 
     @ViewBuilder
@@ -225,66 +217,106 @@ struct VolumeDetailView: View {
                     previewImage: previewImage,
                     currentIcon: currentIcon
                 )
-                .frame(maxWidth: 280)
 
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Mode")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.secondaryText)
-                        Picker("Mode", selection: $pendingMode) {
-                            Text("Fit").tag(FitMode.fit)
-                            Text("Fill").tag(FitMode.fill)
+                VStack(alignment: .leading, spacing: 8) {
+                    Button(action: { Task { await performApply(info) } }) {
+                        if isApplying {
+                            ProgressView().progressViewStyle(.circular).controlSize(.small)
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Text("Apply").frame(maxWidth: .infinity)
                         }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .frame(maxWidth: 160)
-                        .disabled(pendingSource == nil)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.accent)
+                    .keyboardShortcut("s", modifiers: [.command])
+                    .disabled(!canApply(info))
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Note")
+                    Button(action: { showResetConfirm = true }) {
+                        Text("Reset to default").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!isRemembered(info))
+
+                    Button(action: { showForgetConfirm = true }) {
+                        Text("Forget").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundStyle(.red)
+                    .disabled(!isRemembered(info))
+
+                    if let status = statusMessage {
+                        Text(status)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(Theme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .transition(.opacity)
+                    }
+                    if let err = errorMessage {
+                        Text(err)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .transition(.opacity)
+                    }
+                }
+                .frame(width: 160, alignment: .top)
+
+                Spacer(minLength: 0)
+            }
+
+            HStack(alignment: .top, spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Mode")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.secondaryText)
+                    Picker("Mode", selection: $pendingMode) {
+                        Text("Fit").tag(FitMode.fit)
+                        Text("Fill").tag(FitMode.fill)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .disabled(!isZoomableSource)
+                }
+                .frame(width: 160)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Zoom")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Theme.secondaryText)
-                        TextField("e.g. Time Machine archive drive", text: $pendingNote)
-                            .textFieldStyle(.roundedBorder)
-                            .disabled(info.identity == nil)
-                    }
-
-                    if info.identity == nil {
-                        Text("No UUID — this volume can't be remembered.")
-                            .font(.caption)
+                        Spacer()
+                        Text(String(format: "%.2f×", pendingZoom))
+                            .font(.caption.monospacedDigit())
                             .foregroundStyle(Theme.tertiaryText)
+                        Button("Reset") { pendingZoom = 1.0 }
+                            .buttonStyle(.borderless)
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                            .disabled(pendingZoom == 1.0)
                     }
+                    Slider(value: $pendingZoom, in: 0.5...3.0)
+                        .disabled(!isZoomableSource)
                 }
+                .frame(maxWidth: 360)
+
+                Spacer(minLength: 0)
             }
-        }
-    }
 
-    private func actionRow(_ info: VolumeInfo) -> some View {
-        HStack(spacing: 10) {
-            Button(action: { Task { await performApply(info) } }) {
-                if isApplying {
-                    ProgressView().progressViewStyle(.circular).controlSize(.small)
-                } else {
-                    Text("Apply")
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Note")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                TextField("e.g. Time Machine archive drive", text: $pendingNote)
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(info.identity == nil)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
-            .keyboardShortcut("s", modifiers: [.command])
-            .disabled(!canApply(info))
 
-            Button("Reset to default") { showResetConfirm = true }
-                .buttonStyle(.bordered)
-                .disabled(!isRemembered(info))
-
-            Spacer()
-
-            Button("Forget") { showForgetConfirm = true }
-                .buttonStyle(.bordered)
-                .foregroundStyle(.red)
-                .disabled(!isRemembered(info))
+            if info.identity == nil {
+                Text("No UUID — this volume can't be remembered.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.tertiaryText)
+            }
         }
     }
 
@@ -360,27 +392,52 @@ struct VolumeDetailView: View {
         return appState.remembered.contains { $0.identity == id }
     }
 
+    /// The URL the editor is currently rendering from — a user-picked pending
+    /// source takes precedence over the cached original.
+    private var effectiveSource: URL? {
+        pendingSource ?? cachedSource
+    }
+
+    /// `.icns` is already rasterized; zoom/mode do nothing. Everything else is
+    /// re-renderable through ImageNormalizer.
+    private var isZoomableSource: Bool {
+        guard let src = effectiveSource else { return false }
+        return src.pathExtension.lowercased() != "icns"
+    }
+
     private func canApply(_ info: VolumeInfo) -> Bool {
         guard !isApplying else { return false }
-        guard info.identity != nil else { return false }
-        return pendingSource != nil
+        guard let id = info.identity else { return false }
+        // Always apply-able when user picked a new source.
+        if pendingSource != nil { return true }
+        // Otherwise only if we have a re-renderable cached source AND the
+        // user has moved sliders away from whatever's stored on the record.
+        guard let cachedSource,
+              cachedSource.pathExtension.lowercased() != "icns" else { return false }
+        guard let record = appState.remembered.first(where: { $0.identity == id }) else { return false }
+        return pendingMode != record.fitMode || pendingZoom != record.zoom
     }
 
     private func loadInitialState(for info: VolumeInfo) {
-        // Load existing record's note + mode if present.
+        // Load existing record's note, mode, zoom if present.
         if let id = info.identity,
            let record = appState.remembered.first(where: { $0.identity == id }) {
             pendingNote = record.note
             pendingMode = record.fitMode
+            pendingZoom = record.zoom
+            cachedSource = try? IconCache.sourceURL(for: id)
         } else {
             pendingNote = ""
             pendingMode = .fit
+            pendingZoom = 1.0
+            cachedSource = nil
         }
         pendingSource = nil
         previewImage = nil
         statusMessage = nil
         errorMessage = nil
         loadCurrentIcon(for: info)
+        renderPreview()
     }
 
     private func loadCurrentIcon(for info: VolumeInfo) {
@@ -395,24 +452,28 @@ struct VolumeDetailView: View {
         }
     }
 
-    private func renderPreview(source: URL?, mode: FitMode) {
-        previewTask?.cancel()
-        guard let source else {
+    /// Fast, synchronous preview — renders from `effectiveSource` (pending or
+    /// cached) at the current `pendingMode`/`pendingZoom`. Skips `iconutil`
+    /// so the slider stays responsive; the full pipeline runs on Apply.
+    private func renderPreview() {
+        guard let source = effectiveSource else {
             previewImage = nil
             return
         }
-        previewTask = Task {
-            do {
-                let icns = try await IconRenderer.render(source: source, mode: mode)
-                guard !Task.isCancelled else { return }
-                let image = NSImage(data: icns)
-                await MainActor.run {
-                    self.previewImage = image
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = "Couldn't render preview: \(error.localizedDescription)"
-                }
+        do {
+            previewImage = try IconRenderer.preview(source: source, mode: pendingMode, zoom: pendingZoom)
+            errorMessage = nil
+        } catch {
+            previewImage = nil
+            // If the cached source is missing on disk, drop the stale reference
+            // so the editor falls back cleanly to the read-only current icon
+            // instead of re-erroring on every slider tick.
+            if pendingSource == nil, let cached = cachedSource,
+               !FileManager.default.fileExists(atPath: cached.path) {
+                cachedSource = nil
+                errorMessage = nil
+            } else {
+                errorMessage = "Couldn't render preview: \(error.localizedDescription)"
             }
         }
     }
@@ -430,20 +491,25 @@ struct VolumeDetailView: View {
     // MARK: - Actions
 
     private func performApply(_ info: VolumeInfo) async {
-        guard let source = pendingSource else { return }
+        guard let source = effectiveSource else { return }
         isApplying = true
         errorMessage = nil
         statusMessage = "Rendering and applying…"
         defer { isApplying = false }
         do {
-            try await appState.applyIcon(source: source, mode: pendingMode, to: info)
+            try await appState.applyIcon(source: source, mode: pendingMode, zoom: pendingZoom, to: info)
             // After apply, also push the current note if any.
             if let id = info.identity, !pendingNote.isEmpty {
                 try? await appState.updateNote(for: id, to: pendingNote)
             }
             pendingSource = nil
-            previewImage = nil
             loadCurrentIcon(for: info)
+            // Refresh cached source reference (the just-applied file was
+            // copied into the cache by AppState).
+            if let id = info.identity {
+                cachedSource = try? IconCache.sourceURL(for: id)
+            }
+            renderPreview()
             statusMessage = "✓ Applied. Finder will refresh within a few seconds."
         } catch {
             errorMessage = "✗ \(error.localizedDescription)"
@@ -457,6 +523,7 @@ struct VolumeDetailView: View {
         do {
             try await appState.resetIcon(for: info)
             pendingSource = nil
+            cachedSource = nil
             previewImage = nil
             pendingNote = ""
             currentIcon = nil

@@ -32,10 +32,24 @@ enum IconCache {
         let ext = sourceURL.pathExtension.lowercased().isEmpty ? "bin" : sourceURL.pathExtension.lowercased()
         let destURL = try iconsDir()
             .appendingPathComponent("\(identity.raw).src.\(ext)")
-        let fm = FileManager.default
-        if fm.fileExists(atPath: destURL.path) {
-            try fm.removeItem(at: destURL)
+
+        // Re-applying an already-cached source (e.g. just re-zoom): source and
+        // dest are the same file — nothing to copy, and we must not delete it.
+        if sourceURL.standardizedFileURL == destURL.standardizedFileURL {
+            return destURL
         }
+
+        // Clear any stale `.src.*` for this identity — a new source may have a
+        // different extension than the previous one, and `sourceURL(for:)`
+        // picks whatever it finds first, so leaving two would be ambiguous.
+        let dir = try iconsDir()
+        let prefix = "\(identity.raw).src."
+        let contents = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+        let fm = FileManager.default
+        for name in contents where name.hasPrefix(prefix) {
+            try? fm.removeItem(at: dir.appendingPathComponent(name))
+        }
+
         try fm.copyItem(at: sourceURL, to: destURL)
         return destURL
     }

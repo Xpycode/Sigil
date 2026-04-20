@@ -34,7 +34,7 @@ struct IconDropZone: View {
     var body: some View {
         VStack(spacing: 10) {
             zone
-                .frame(minHeight: 220)
+                .frame(width: 200, height: 200)
                 .dropDestination(for: URL.self) { urls, _ in
                     guard let url = urls.first else { return false }
                     pendingSource = url
@@ -43,7 +43,8 @@ struct IconDropZone: View {
                     isTargeted = targeted
                 }
 
-            HStack {
+            HStack(spacing: 8) {
+                Spacer()
                 Button("Browse…") { showPicker = true }
                     .buttonStyle(.bordered)
                     .fileImporter(
@@ -61,9 +62,9 @@ struct IconDropZone: View {
                         .buttonStyle(.borderless)
                         .foregroundStyle(Theme.secondaryText)
                 }
-
                 Spacer()
             }
+            .frame(width: 200)
         }
     }
 
@@ -84,26 +85,22 @@ struct IconDropZone: View {
                 .foregroundStyle(isTargeted ? Theme.accent : Theme.separator)
 
             content
-                .padding(16)
+                .padding(contentPadding)
         }
         .animation(.easeInOut(duration: 0.15), value: isTargeted)
     }
 
+    /// Empty state needs breathing room around the prompt text; when there's
+    /// an image to show, keep the inset minimal so the preview fills the zone.
+    private var contentPadding: CGFloat {
+        (pendingSource != nil || currentIcon != nil) ? 2 : 16
+    }
+
     @ViewBuilder
     private var content: some View {
-        if pendingSource != nil {
-            if let previewImage {
-                Image(nsImage: previewImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-            } else {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .controlSize(.small)
-            }
-        } else if let currentIcon {
+        if let image = previewImage ?? currentIcon {
             ZStack(alignment: .bottom) {
-                Image(nsImage: currentIcon)
+                Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                 if isTargeted {
