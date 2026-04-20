@@ -1,112 +1,120 @@
-# Sigil
+# <img src="01_Project/Sigil/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" width="48" align="top" /> Sigil
 
-A small macOS app that assigns custom icons to external volumes — and **remembers them when the volumes are unmounted**, silently re-applying each icon on remount.
+A macOS app that assigns custom icons to external volumes — and **remembers them across unmounts, reformats, and remounts**.
 
-<!-- TODO: hero screenshot (sidebar + detail pane with a real icon applied) -->
-![Sigil screenshot](03_Screenshots/01-main.png)
+![macOS](https://img.shields.io/badge/macOS-14.0+-blue.svg)
+![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)
+[![Download](https://img.shields.io/badge/Download-v1.0.0-blue.svg)](https://github.com/Xpycode/Sigil/releases/latest)
+![Downloads](https://img.shields.io/github/downloads/Xpycode/Sigil/total.svg)
 
-![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-blue)
-![Swift](https://img.shields.io/badge/swift-5.9%2B-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
+## Screenshots
 
----
+![Sigil main window](03_Screenshots/Sigil-1-Hero.png)
+*Main window — sidebar lists mounted and remembered volumes, detail pane holds the drop zone, zoom, and actions*
 
-## Why Sigil exists
+![Applied state](03_Screenshots/Sigil-2-applied.png)
+*Applied state — current icon fills the canvas at the chosen zoom, ready to adjust or reset*
 
-macOS Finder lets you paste a custom icon onto a volume — but the icon is stored as a hidden `.VolumeIcon.icns` file **on the volume itself**. That means:
+![Custom icon in Finder](03_Screenshots/Sigil-3-Finder.png)
+*Finder — custom icons persist on the volume, visible anywhere macOS shows drive icons*
 
-- Reformat the drive → icon gone.
-- Use it on another Mac → icon gone.
-- Plug in a drive you've never assigned an icon to → generic silver icon forever.
-
-There's no Finder UI for managing icons across many drives, and no way to queue an icon for a drive that isn't currently plugged in.
-
-Sigil fixes all three.
+![Remembered volumes](03_Screenshots/Sigil-5-remembered.png)
+*Remembered group — unmounted drives keep their assignment for silent re-apply on remount*
 
 ## Features
 
-- **Apply a custom icon** to any mounted external volume from a PNG, JPEG, HEIC, or existing `.icns` file. Drag-and-drop or click-to-browse.
-- **Remember across sessions.** Sigil keeps a local database of (volume UUID → icon) mappings.
-- **Silent re-apply on remount.** Plug a previously-seen drive back in and Sigil writes its icon back automatically, within 1-3 seconds, without any click from you. The drive can have been reformatted, used on another Mac, or left unplugged for a year — if Sigil recognises its UUID, it re-applies.
-- **Smart conflict handling.** If the on-disk icon has changed since Sigil last wrote one, Sigil notices and asks what to do rather than clobbering your change.
-- **Per-volume notes.** Jot down what the drive is for — Sigil shows notes on unmounted/remembered drives so you can identify a drawer full of labelled SSDs at a glance.
-- **Fit and Fill.** Non-square source? Choose whether to letterbox with transparent padding (Fit) or center-crop (Fill).
+- **Apply** custom icons from PNG, JPEG, HEIC, or `.icns` files via drag-and-drop or click-to-browse
+- **Remember** every assignment in a local database keyed by volume UUID
+- **Silent re-apply** — plug a known drive back in and Sigil writes its icon back within 1–3 seconds, no clicks required
+- **Zoom** — dial in framing for non-square source images (1.0× fits, higher values fill)
+- **Conflict detection** — if the volume's icon changed outside Sigil, Sigil asks rather than clobbering
+- **Per-volume notes** — tag what each drive is for; notes show in the Remembered group even when unplugged
+- **Reset** — one click returns a volume to its default Finder icon
+- **Forget** — one click removes Sigil's record of a volume entirely
 
-## Install
+## Why Sigil exists
 
-1. Download the latest DMG from the [Releases](https://github.com/Xpycode/Sigil/releases) page.
-2. Open it, drag Sigil into Applications.
-3. Launch. The first time, macOS will ask whether you want to send Sigil notifications — this is used only for the "icon conflict on remount" prompt. You can say no; conflicts will show as an in-app banner instead.
+macOS Finder stores a custom volume icon as a hidden `.VolumeIcon.icns` file on the volume itself. Reformat the drive and the icon's gone. Use it on another Mac and the icon's gone. Plug in a new drive and you get the generic silver icon forever. Sigil fixes all three by keeping the (UUID → icon) mapping locally and re-applying on remount.
 
-The DMG is notarized by Apple, so there's no Gatekeeper warning.
+## Installation
+
+1. Download `Sigil-v1.0.0.dmg` from [Releases](https://github.com/Xpycode/Sigil/releases/latest)
+2. Open the DMG and drag Sigil to Applications
+3. Launch from Applications folder
+
+The DMG is notarized by Apple — no Gatekeeper warning on first launch.
+
+## Usage
+
+1. **Plug in** an external volume
+2. **Select it** in the Mounted sidebar
+3. **Drop or click** an image onto the canvas
+4. **Zoom** the preview if needed (raster sources only; `.icns` is already sized)
+5. **Apply** — the Finder icon updates within a second
+
+Once applied, the assignment is remembered. Eject and replug the drive anytime — Sigil re-applies silently.
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| ⌘S | Apply |
+| ⌘W | Close window |
+| ⌘Q | Quit |
+
+## How it works
+
+Every apply is a direct three-step write to the volume root:
+
+1. Write the rendered `.icns` to `/Volumes/<Drive>/.VolumeIcon.icns` atomically
+2. Set byte 8 of `com.apple.FinderInfo` to `0x04` (the `kHasCustomIcon` flag) via `setxattr(2)`
+3. Bump the volume's mtime with `utimes` so Finder refreshes its icon cache
+
+This bypasses `NSWorkspace.setIcon(_:forFile:options:)`, which [silently fails on volume roots since macOS 13.1](https://github.com/mklement0/fileicon/issues/42). The `.icns` itself is generated by `iconutil -c icns` from a 10-file `.iconset` rendered at 16/32/128/256/512pt @1x and @2x.
+
+## Data
+
+Sigil stores:
+
+- `~/Library/Application Support/Sigil/volumes.json` — UUID, name, note, zoom, hash, timestamps, plus a rolling `.bak`
+- `~/Library/Application Support/Sigil/icons/{uuid}.icns` — cached rendered icon for silent re-apply
+- `~/Library/Application Support/Sigil/icons/{uuid}.src.{ext}` — cached source for re-rendering on zoom change
+
+Sigil does **not** run in the background. The mount watcher only operates while the app is open. If a drive is plugged in while Sigil is closed, its icon re-applies next time you open Sigil.
 
 ## Requirements
 
 - macOS 14.0 (Sonoma) or later
-- External drives (USB, Thunderbolt, SD card, or mounted disk image)
+- External volumes (USB, Thunderbolt, SD, or mounted disk image)
 
-## How it works
+## Building from Source
 
-Under the hood, Sigil performs a **two-step write** every time it applies an icon:
+Requires Xcode 16+ and macOS 14.0+.
 
-1. Write the rendered `.icns` file to `/Volumes/<YourDrive>/.VolumeIcon.icns` (atomic).
-2. Set byte 8 of the `com.apple.FinderInfo` extended attribute on the volume root to `0x04` (the `kHasCustomIcon` flag) via `setxattr(2)`.
-3. Bump the volume's modification time with `utimes` so Finder refreshes its icon cache.
-
-This is required because `NSWorkspace.setIcon(_:forFile:options:)` — the obvious API — [silently fails to set the FinderInfo flag on volume roots since macOS 13.1](https://github.com/mklement0/fileicon/issues/42). Sigil does the two-step write directly, which works reliably on macOS 14+.
-
-The `.icns` itself is generated by `/usr/bin/iconutil -c icns` from a 10-file `.iconset/` directory rendered at 16/32/128/256/512 pt each at @1x and @2x.
-
-## What Sigil stores locally
-
-- `~/Library/Application Support/Sigil/volumes.json` — one entry per remembered volume: UUID, name, note, last-applied timestamp, last-applied SHA-256 hash, Fit/Fill mode, source filename. Plus a single rolling `.bak` in the same directory.
-- `~/Library/Application Support/Sigil/icons/{uuid}.icns` — cached rendered icon for silent re-apply.
-- `~/Library/Application Support/Sigil/icons/{uuid}.src.{ext}` — cached copy of the user's original source image (so Fit/Fill toggling doesn't require a re-import).
-
-Sigil does **not** run in the background. The mount watcher only operates while the app is open. If you plug in a drive while Sigil is closed, it re-applies the icon next time you open Sigil.
+```bash
+git clone https://github.com/Xpycode/Sigil.git
+cd Sigil/01_Project
+xcodebuild -scheme Sigil -configuration Release
+```
 
 ## Non-goals (v1.0)
 
-- SF Symbol / emoji icons (maybe v1.1)
+- SF Symbol / emoji icons
 - iCloud sync
-- Auto-update via Sparkle
+- Sparkle auto-update
 - Mac App Store distribution
 - Background process / launch at login
 
-## Development
+## Reporting bugs
 
-Sigil is generated from `01_Project/project.yml` via [xcodegen](https://github.com/yonaskolb/XcodeGen):
-
-```bash
-cd 01_Project
-xcodegen generate
-open Sigil.xcodeproj
-```
-
-Run tests with `xcodebuild test -scheme Sigil -destination 'platform=macOS'`. The suite includes real-APFS integration tests that create a scratch DMG via `hdiutil`, so tests take ~15 seconds.
-
-Architecture overview:
-
-- `App/` — `@main` entry, `AppState` (top-level `@MainActor @Observable` orchestrator), `Theme` + `FCPToolbarButtonStyle` (the App Shell Standard chrome), `ConflictNotifier`.
-- `Models/` — `VolumeIdentity`, `FitMode`, `VolumeRecord`, `VolumeInfo`.
-- `Services/` — `actor`-based persistence (`VolumeStore`), mount watching (`MountWatcher`), icon rendering (`ImageNormalizer` → `IconsetWriter` → `IconutilRunner` → `IconRenderer`), icon application (`XAttr` + `IconApplier`), cache (`IconCache`), smart-silent orchestrator (`SmartSilentApplier`).
-- `Views/` — SwiftUI views, all built on `HSplitView` per the App Shell Standard.
-- `Logging/` — `os.Logger` instances under subsystem `com.lucesumbrarum.sigil`.
-
-## License
-
-[MIT](LICENSE) — do what you like. Attribution appreciated.
-
-## Support
-
-If Sigil is useful and you want to say thanks: *(donation link placeholder)*.
-
-For bugs or feature ideas: open an issue on GitHub with the output of:
+Open an issue with the output of:
 
 ```bash
 log show --predicate 'subsystem == "com.lucesumbrarum.sigil"' --last 1h
 ```
 
----
+## License
 
-*Sigil is a weekend project built to scratch a real itch. It does one niche thing well.*
+[MIT](LICENSE)

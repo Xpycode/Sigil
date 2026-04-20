@@ -210,7 +210,7 @@ struct VolumeDetailView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
 
-            HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .center, spacing: 16) {
                 IconDropZone(
                     pendingSource: $pendingSource,
                     previewImage: previewImage,
@@ -218,6 +218,26 @@ struct VolumeDetailView: View {
                 )
 
                 VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Zoom")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.secondaryText)
+                            Spacer()
+                            Text(String(format: "%.2f×", pendingZoom))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(Theme.tertiaryText)
+                            Button("Reset") { pendingZoom = 1.0 }
+                                .buttonStyle(.borderless)
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText)
+                                .disabled(pendingZoom == 1.0)
+                        }
+                        Slider(value: $pendingZoom, in: 0.5...3.0)
+                            .disabled(!isZoomableSource)
+                    }
+                    .padding(.bottom, 8)
+
                     Button(action: { Task { await performApply(info) } }) {
                         if isApplying {
                             ProgressView().progressViewStyle(.circular).controlSize(.small)
@@ -259,30 +279,10 @@ struct VolumeDetailView: View {
                             .transition(.opacity)
                     }
                 }
-                .frame(width: 160, alignment: .top)
+                .frame(width: 160, alignment: .leading)
 
                 Spacer(minLength: 0)
             }
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Zoom")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Theme.secondaryText)
-                    Spacer()
-                    Text(String(format: "%.2f×", pendingZoom))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(Theme.tertiaryText)
-                    Button("Reset") { pendingZoom = 1.0 }
-                        .buttonStyle(.borderless)
-                        .font(.caption)
-                        .foregroundStyle(Theme.secondaryText)
-                        .disabled(pendingZoom == 1.0)
-                }
-                Slider(value: $pendingZoom, in: 0.5...3.0)
-                    .disabled(!isZoomableSource)
-            }
-            .frame(maxWidth: 500)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Note")
