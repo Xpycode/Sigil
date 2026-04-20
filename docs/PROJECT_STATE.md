@@ -11,13 +11,15 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** build (Waves 0–8 done; Wave 9 next — polish + ship)
-- **Phase:** implementation → shipping
-- **Focus:** Wave 9 — App icon design, README, LICENSE, notarization, DMG, GitHub release
+- **Funnel:** **ship** (waves 0–9 code-complete; awaiting notarized .app from Xcode)
+- **Phase:** shipping
+- **Focus:** User runs Xcode Archive → Direct Distribution. Claude then builds DMG + pushes GitHub release v1.0.0.
 - **Status:** ready
 - **Last updated:** 2026-04-19
 - **Test count:** 31 green
-- **Production seams:** ✅ os.Logger wired (mount/io/render/ui categories), corrupt-store recovery surfaces alert, background-failure paths funnel to user-visible error
+- **Repo:** `github.com/Xpycode/Sigil` — main + 9 wave tags pushed (force-pushed once to overwrite GitHub's auto-generated scaffold, authorized by user)
+- **App icon:** Wax-seal, blackletter S on obsidian (Kling-generated from Prompt A). `AppIcon.appiconset` wired at 10 sizes.
+- **Signing:** Managed Developer ID Application (team `FDMSRXXN73`, Luces Umbrarum). No local Developer ID cert needed — Xcode handles via Apple's services.
 
 ## Funnel Progress
 
@@ -30,7 +32,7 @@
 ## Phase Progress
 
 ```
-[###################.] 97% — Waves 0-8 shipped; only Wave 9 (design + notarize + ship) remains
+[####################] 99% — Waves 0-9 merged + pushed; awaiting Xcode notarize + DMG + GitHub Release
 ```
 
 | Phase | Status | Notes |

@@ -10,7 +10,7 @@ CVI (Custom Volume Icons) — macOS utility for managing custom icons on externa
 
 | Date | Focus | Outcome | Log |
 |------|-------|---------|-----|
-| 2026-04-19 | Project setup + 4-phase discovery + spec + plan | Directions installed; `specs/cvi-v1.md`; **`IMPLEMENTATION_PLAN.md`** (10 waves); 7 decisions logged. Critical research finding on volume-icon API. Ready for Wave 0 once bundle ID confirmed. | [log](2026-04-19.md) |
+| 2026-04-19 | Sigil: inception → ship-ready in one session | **Waves 0–9 all shipped.** 31 tests green. Real-hardware smoke tests for the xattr-based two-step icon write AND smart-silent re-apply on remount both confirmed working by user. Repo pushed to `github.com/Xpycode/Sigil`. Only the Xcode Archive + Direct-Distribution notarize remains (user-driven). | [log](2026-04-19.md) |
 
 ---
 
