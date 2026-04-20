@@ -3,7 +3,7 @@
 **Status:** Approved → Plan complete (`IMPLEMENTATION_PLAN.md`) → ready for Build
 **Product:** Sigil  *(working codename was CVI — Custom Volume Icons)*
 **Bundle ID:** `com.lucesumbrarum.sigil`
-**Working directory:** `1-macOS/CVI/`
+**Working directory:** `1-macOS/Sigil/`
 **Created:** 2026-04-19
 **Last updated:** 2026-04-19
 

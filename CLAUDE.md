@@ -2,7 +2,7 @@
 
 A small macOS app that assigns custom icons to external volumes and remembers icons for unmounted volumes (re-applying when the volume returns).
 
-> **Working codename was "CVI"** (Custom Volume Icons). The product ships as **Sigil**. The working directory remains `1-macOS/CVI/` so existing paths stay stable; everywhere else (Xcode product, bundle ID, user-facing strings, App Support folder name) uses **Sigil**.
+> **Working codename was "CVI"** (Custom Volume Icons). The product ships as **Sigil** and the working directory is `1-macOS/Sigil/`. Historical references to "CVI" remain in `docs/decisions.md` and older session logs as part of the project record.
 
 ---
 
@@ -39,7 +39,7 @@ See `docs/PROJECT_STATE.md` for funnel position and `IMPLEMENTATION_PLAN.md` for
 ## Folder layout
 
 ```
-CVI/                              ← working directory (codename retained)
+Sigil/                            ← working directory
 ├── 01_Project/                   ← Xcode project + source (Sigil.xcodeproj, Sigil/)
 ├── 02_Design/                    ← Affinity icon source, mockups
 │   └── Exports/                  ← AppIcon.appiconset

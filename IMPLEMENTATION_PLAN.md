@@ -1,7 +1,7 @@
 # Sigil v1.0 — Implementation Plan
 
 **Created:** 2026-04-19
-**Working directory:** `1-macOS/CVI/` *(retained from project codename; product ships as Sigil)*
+**Working directory:** `1-macOS/Sigil/` *(working codename was CVI; product ships as Sigil)*
 **Source spec:** `specs/sigil-v1.md`
 **Funnel position:** Plan → ready to gate into Build
 

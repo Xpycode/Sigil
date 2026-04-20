@@ -1,11 +1,11 @@
-# Project State — CVI
+# Project State — Sigil
 
 > Size limit: <100 lines. This is a digest, not an archive.
 
 ## Identity
 - **Product:** Sigil  *(working codename: CVI)*
 - **Bundle ID:** `com.lucesumbrarum.sigil`
-- **Working directory:** `1-macOS/CVI/` (codename retained for path stability)
+- **Working directory:** `1-macOS/Sigil/`
 - **One-liner:** A small macOS app that assigns custom icons to external volumes and remembers icons for unmounted volumes (re-applying when the volume returns).
 - **Tags:** macOS, SwiftUI, Finder, volumes, utility, niche
 - **Started:** 2026-04-19
