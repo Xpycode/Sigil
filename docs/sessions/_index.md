@@ -11,6 +11,7 @@ CVI (Custom Volume Icons) — macOS utility for managing custom icons on externa
 | Date | Focus | Outcome | Log |
 |------|-------|---------|-----|
 | 2026-04-19 | Sigil: inception → ship-ready in one session | **Waves 0–9 all shipped.** 31 tests green. Real-hardware smoke tests for the xattr-based two-step icon write AND smart-silent re-apply on remount both confirmed working by user. Repo pushed to `github.com/Xpycode/Sigil`. Only the Xcode Archive + Direct-Distribution notarize remains (user-driven). | [log](2026-04-19.md) |
+| 2026-04-20 | Detail-view redesign + zoom slider + re-zoom from cached source | Fixed clipped-Apply layout bug; new default window size 1000×720; compact metadata; action row merged into editor; zoom slider (0.5×–3.0×) with fast-preview path; sliders now work on already-applied icons without re-import; caught and fixed `IconCache.saveSource` src==dest destructive-delete bug. On branch `feature/ui-redesign-zoom`. | [log](2026-04-20.md) |
 
 ---
 
