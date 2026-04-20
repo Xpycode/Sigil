@@ -74,7 +74,6 @@ struct VolumeDetailView: View {
         .padding(24)
         .task(id: info.id) { loadInitialState(for: info) }
         .onChange(of: pendingSource) { _, _ in renderPreview() }
-        .onChange(of: pendingMode) { _, _ in renderPreview() }
         .onChange(of: pendingZoom) { _, _ in renderPreview() }
         .onChange(of: pendingNote) { _, newValue in
             scheduleNoteSave(info: info, note: newValue)
@@ -265,43 +264,25 @@ struct VolumeDetailView: View {
                 Spacer(minLength: 0)
             }
 
-            HStack(alignment: .top, spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Mode")
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Zoom")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.secondaryText)
-                    Picker("Mode", selection: $pendingMode) {
-                        Text("Fit").tag(FitMode.fit)
-                        Text("Fill").tag(FitMode.fill)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+                    Spacer()
+                    Text(String(format: "%.2f×", pendingZoom))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(Theme.tertiaryText)
+                    Button("Reset") { pendingZoom = 1.0 }
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .disabled(pendingZoom == 1.0)
+                }
+                Slider(value: $pendingZoom, in: 0.5...3.0)
                     .disabled(!isZoomableSource)
-                }
-                .frame(width: 160)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Zoom")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.secondaryText)
-                        Spacer()
-                        Text(String(format: "%.2f×", pendingZoom))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(Theme.tertiaryText)
-                        Button("Reset") { pendingZoom = 1.0 }
-                            .buttonStyle(.borderless)
-                            .font(.caption)
-                            .foregroundStyle(Theme.secondaryText)
-                            .disabled(pendingZoom == 1.0)
-                    }
-                    Slider(value: $pendingZoom, in: 0.5...3.0)
-                        .disabled(!isZoomableSource)
-                }
-                .frame(maxWidth: 360)
-
-                Spacer(minLength: 0)
             }
+            .frame(maxWidth: 500)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Note")
