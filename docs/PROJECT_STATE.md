@@ -15,7 +15,7 @@
 - **Phase:** shipped
 - **Focus:** Release is live → https://github.com/Xpycode/Sigil/releases/tag/v1.0.0. Next work is test-coverage backfill for zoom pipeline + `IconCache.saveSource`, then whatever warrants a v1.1.
 - **Status:** shipped
-- **Last updated:** 2026-04-20 (evening)
+- **Last updated:** 2026-04-20 (night)
 - **Test count:** 31 green (zoom + IconCache regression tests still pending — next session)
 - **Repo:** `github.com/Xpycode/Sigil` — `main` at `fa3ea86`. Tag `v1.0.0` pushed; DMG (12 MB, notarized + stapled) attached to the release. 9 wave tags + 3 feature branches in history (`feature/ui-redesign-zoom`, `feature/drop-fit-fill-ui`, `feature/release-polish-v1.0.0`).
 - **App icon:** Wax-seal, blackletter S on obsidian (Kling-generated from Prompt A). `AppIcon.appiconset` wired at 10 sizes.
