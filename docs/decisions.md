@@ -27,6 +27,65 @@ This file tracks the **WHY** behind technical and design decisions. Append-only,
 
 ## Decisions
 
+### 2026-05-04 — Finder cache invalidation: pair `utimes` with `noteFileSystemChanged`
+
+**Context:** v1.0.1 testing surfaced that re-applying an icon (with a new
+zoom value) to a previously-iconned volume succeeded end-to-end on disk —
+the saved `.VolumeIcon.icns` correctly contained the zoomed content (verified
+via Quick Look) — but Finder continued to show the *previously-applied*
+volume icon. The user's natural reading was "the zoom slider doesn't work."
+Real bug: Finder's volume-icon cache wasn't being invalidated when the icns
+was overwritten in place.
+
+`IconApplier.touchVolume` already called `utimes(volumeURL.path, nil)` to
+nudge mtime/atime. That works on a *first* apply (no prior icon → Finder
+reads fresh) but is documented to be insufficient when **overwriting an
+existing file in place** — Finder's cache is keyed by inode + mtime + size,
+and a same-size atomic-replace can slip past it.
+
+**Options Considered:**
+1. **Pair `utimes` with `NSWorkspace.shared.noteFileSystemChanged(path)`** —
+   the canonical "I just changed this, please re-look at it now" push hint.
+   Used by both popular custom-icon CLIs (`fileicon`, `iconset`). Apple
+   discourages it for general filesystem watching (FSEvents replaced FNNotify
+   there) but it remains the right tool for this specific push case.
+2. **Force-remove the old icns before writing the new one** — generates a
+   guaranteed-different inode. Reliable invalidation. Downside: brief window
+   where the volume has no `.VolumeIcon.icns`, during which Finder might
+   render the default drive icon and the user sees a flicker.
+3. **Use AppleScript `tell application "Finder" to update <volume>`** —
+   most heavy-handed; spawns or wakes Finder, requires Automation permission,
+   defeats the unobtrusiveness Sigil aims for.
+
+**Decision:** Option 1. Single line added after `utimes`. No flicker, no new
+permissions, no subprocess overhead, no behavior change on the first apply
+(both calls are no-op-equivalent when nothing was cached).
+
+**Rationale:** The whole reason `touchVolume` exists is to invalidate
+Finder's perception of the volume icon. `utimes` is the polite-but-quiet
+hint; `noteFileSystemChanged` is the explicit one. Together they cover both
+the "first apply" path (where utimes alone works) and the "overwrite" path
+(where it doesn't). Same call shape, same place in the code, near-zero
+cognitive overhead for future readers (extensive comment explains the why).
+
+**Trade-offs accepted:** `noteFileSystemChanged` is documented as
+"discouraged" for general filesystem watching, but the docs explicitly note
+that the alternative (FSEvents) is for *receiving* notifications, not
+*sending* them. For the push case, this API is still the supported path.
+
+**Revisit if:** Apple removes `noteFileSystemChanged` entirely (no signs of
+deprecation as of macOS 15) or if Finder's cache invalidation behavior
+changes again. Both unlikely.
+
+**Affected:** `01_Project/Sigil/Services/IconApplier.swift` (added
+`import AppKit` and one line in `touchVolume`).
+
+**Sources:** Apple Developer Documentation — [`NSWorkspace.noteFileSystemChanged`](https://developer.apple.com/documentation/appkit/nsworkspace/1579268-notefilesystemchanged),
+plus reference implementations in [`fileicon`](https://github.com/mklement0/fileicon)
+and [`iconset`](https://github.com/tale/iconset).
+
+---
+
 ### 2026-05-04 — Drop Forget from mounted detail; keep on Remembered only
 
 **Context:** A user-perspective audit raised that on a mounted volume, the

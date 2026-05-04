@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 /// The actor responsible for actually making Finder display a custom icon on
 /// a volume. Performs the two-step write required on macOS 13.1+:
@@ -178,10 +179,21 @@ actor IconApplier {
     }
 
     private static func touchVolume(_ url: URL) {
-        // `utimes(path, nil)` sets access/modification times to "now" without
-        // rewriting any file content. Finder treats this as a change signal
-        // and refreshes the mount-point's icon within 1-3 seconds.
+        // Two-step Finder cache invalidation:
+        //
+        //   1. `utimes(path, nil)` bumps the volume root's access/mod times
+        //      to "now". Finder normally treats this as a change signal.
+        //   2. `noteFileSystemChanged` explicitly tells LaunchServices /
+        //      Finder to re-evaluate the path. `utimes` alone is enough on
+        //      a *first* apply (no prior icon → fresh read) but often
+        //      insufficient when overwriting an existing `.VolumeIcon.icns`
+        //      in place — Finder's volume-icon cache is keyed by inode +
+        //      mtime + size, and a same-size atomic-replace can slip past
+        //      it. The NSWorkspace hint is the canonical "I just changed
+        //      this, please re-look at it now" push (used by `fileicon`,
+        //      `iconset`, and similar CLIs).
         utimes(url.path, nil)
+        NSWorkspace.shared.noteFileSystemChanged(url.path)
     }
 
     private static func freeSpaceBytes(at url: URL) -> Int? {
