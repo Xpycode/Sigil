@@ -27,6 +27,68 @@ This file tracks the **WHY** behind technical and design decisions. Append-only,
 
 ## Decisions
 
+### 2026-05-04 — Drop Forget from mounted detail; keep on Remembered only
+
+**Context:** A user-perspective audit raised that on a mounted volume, the
+Forget button is **strictly redundant** with Reset:
+
+- Reset (`AppState.resetIcon`): strips `.VolumeIcon.icns` from the drive,
+  clears the FinderInfo flag, removes the record, deletes the cache.
+- Forget (`AppState.forget`): removes the record, deletes the cache. Leaves
+  the on-drive icon intact.
+
+Reset is a **strict superset** of Forget when a volume is mounted. Two buttons
+side-by-side that look like they "do almost the same thing" are textbook UX
+confusion — and Sigil is a small focused tool where every visible control
+should pay rent.
+
+**Options Considered:**
+1. **Drop Forget from the mounted detail view; keep it only on Remembered
+   (unmounted) volumes** — eliminates the side-by-side redundancy.
+   Functional necessity preserved (you can't Reset an unmounted disk because
+   Reset writes to it; Remembered volumes still need *some* way to be pruned
+   from the list). Cross-Mac power-user workflow ("apply icon, hand card to
+   colleague, stop tracking it on my Mac without erasing the icon") becomes
+   a two-step: eject the card, then Forget from the Remembered section.
+2. **Rename both buttons** — e.g. Reset → "Remove icon", Forget → "Remove
+   from list" — to make the distinction clearer. Doesn't actually solve the
+   redundancy on mounted volumes, just papers over it.
+3. **Keep both as-is** — status quo. Costs the user a moment of "wait,
+   what's the difference" every time they're about to remove an icon.
+
+**Decision:** Option 1. Mounted detail now shows: Apply · Reset to default.
+Remembered detail still shows: Forget. Reset's confirmation copy now points
+at the cross-Mac workflow as discoverable text:
+
+> "...remove Sigil's record. Finder will show the default drive icon.
+>
+> If you want to keep the icon on the drive but stop Sigil tracking it,
+> eject the volume first, then use Forget from the Remembered list."
+
+**Rationale:** The cross-Mac case is real but niche; users who care about
+that semantic now have it documented in the Reset confirmation rather than
+needing to discover it by comparing two button captions. The everyday user
+sees one obvious destructive action ("Reset to default") that does what its
+name says. The Remembered view still has Forget because functionally it
+*must* — you cannot Reset a disk that is not currently writeable.
+
+**Trade-offs accepted:** One extra step (eject) for the cross-Mac workflow.
+Acceptable; rare flow, and the eject is itself a meaningful safety boundary
+(physically separating the card from your Mac before declaring "I'm done
+with this here").
+
+**Revisit if:** A noticeable fraction of users want to declutter Sigil's
+Remembered list while volumes are still mounted. (No evidence of this so
+far; if it surfaces, a Cmd-modifier on Reset, or a small ⋯ menu, can
+re-introduce Forget without putting the redundant button back in the
+default flow.)
+
+**Affected:** `01_Project/Sigil/Views/VolumeDetailView.swift` (removed the
+Forget button + its `.sheet` wiring from the mounted detail; enriched the
+Reset confirmation copy with the eject-first hint).
+
+---
+
 ### 2026-05-04 — Icon pipeline: explicit sRGB CGContext (not `.deviceRGB` / `NSImage(size:flipped:)`)
 
 **Context:** v1.0.1 smoke test surfaced a colour-shift bug: an Angelbird AV PRO

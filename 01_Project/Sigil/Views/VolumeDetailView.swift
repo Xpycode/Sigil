@@ -81,25 +81,13 @@ struct VolumeDetailView: View {
         .sheet(isPresented: $showResetConfirm) {
             ConfirmationSheet(
                 title: "Reset icon on '\(info.name)'?",
-                message: "Sigil will strip the custom icon from this volume, clear the FinderInfo flag, and remove Sigil's record. Finder will show the default drive icon.",
+                message: "Sigil will strip the custom icon from this volume, clear the FinderInfo flag, and remove Sigil's record. Finder will show the default drive icon.\n\nIf you want to keep the icon on the drive but stop Sigil tracking it, eject the volume first, then use Forget from the Remembered list.",
                 destructiveTitle: "Reset",
                 onConfirm: {
                     showResetConfirm = false
                     Task { await performReset(info) }
                 },
                 onCancel: { showResetConfirm = false }
-            )
-        }
-        .sheet(isPresented: $showForgetConfirm) {
-            ConfirmationSheet(
-                title: "Forget '\(info.name)'?",
-                message: "Sigil will remove this volume from its memory and delete its cached icon. Any icon already on the physical volume stays — use Reset if you also want to strip it.",
-                destructiveTitle: "Forget",
-                onConfirm: {
-                    showForgetConfirm = false
-                    Task { await performForget(identity: info.identity) }
-                },
-                onCancel: { showForgetConfirm = false }
             )
         }
     }
@@ -291,13 +279,6 @@ struct VolumeDetailView: View {
                         Text("Reset to default").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
-                    .disabled(!isRemembered(info))
-
-                    Button(action: { showForgetConfirm = true }) {
-                        Text("Forget").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundStyle(.red)
                     .disabled(!isRemembered(info))
 
                     if let status = statusMessage {
