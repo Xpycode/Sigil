@@ -45,7 +45,47 @@ when they first select a fresh volume.
 
 ---
 
-### 2026-05-04 — Finder cache invalidation: pair `utimes` with `noteFileSystemChanged`
+### 2026-05-04 — Finder cache invalidation, round 2: notify both volume URL AND icns file URL
+
+**Context:** Round-1 fix (pair `utimes` with `NSWorkspace.noteFileSystemChanged`
+on the volume URL) helped on first applies but didn't reliably refresh
+Finder on overwrites. Definitive diagnosis came from a `shasum` comparison
+between Sigil's saved icns at `~/Library/Application Support/Sigil/icons/<UUID>.icns`
+and the on-disk `/Volumes/<vol>/.VolumeIcon.icns` — they matched bit-for-bit.
+So the bytes were correct on disk; Finder was simply serving a cached icon
+from a previous apply.
+
+Investigation showed Finder's volume-icon cache lives in **two** buckets,
+keyed independently by:
+- the volume URL (the directory containing the icns), and
+- the icns file URL itself (Finder treats the leading-dot hidden path as
+  its own cache entry).
+
+Notifying only the volume URL invalidates the first bucket but leaves the
+second populated; Finder serves from whichever it consults first.
+
+**Decision:** Bump mtime AND post `noteFileSystemChanged` for **both** the
+volume URL and the icns URL. Same calls, twice each, against two paths.
+
+Reference implementations in `iconset` and `fileicon` (popular custom-icon
+CLIs) do the same dual-path dance — confirmed reading their source.
+
+**Trade-offs accepted:** Two extra syscalls per apply (one `utimes`, one
+notification). Negligible cost; runs once per Apply, not per render tier.
+
+**Revisit if:** Even dual notification proves insufficient on some volumes
+or future macOS releases. The next escalation is toggling the
+`kHasCustomIcon` FinderInfo flag (clear → set) — that forces Finder to
+re-evaluate "does this volume have a custom icon" entirely, not just
+"what icon." More invasive (extra xattr write); kept in reserve.
+
+**Affected:** `01_Project/Sigil/Services/IconApplier.swift`
+(`touchVolume` — notify on both `url.path` and
+`url.appendingPathComponent(iconFilename).path`).
+
+---
+
+### 2026-05-04 — Reset / Forget must reset zoom + mode too
 
 **Context:** v1.0.1 testing surfaced that re-applying an icon (with a new
 zoom value) to a previously-iconned volume succeeded end-to-end on disk —

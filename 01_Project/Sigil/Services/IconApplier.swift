@@ -179,21 +179,27 @@ actor IconApplier {
     }
 
     private static func touchVolume(_ url: URL) {
-        // Two-step Finder cache invalidation:
+        // Belt-and-braces Finder cache invalidation. Empirically (verified
+        // against shasum-equal on-disk file vs. stale Finder thumbnail),
+        // Finder's volume-icon cache lives in two buckets keyed by:
         //
-        //   1. `utimes(path, nil)` bumps the volume root's access/mod times
-        //      to "now". Finder normally treats this as a change signal.
-        //   2. `noteFileSystemChanged` explicitly tells LaunchServices /
-        //      Finder to re-evaluate the path. `utimes` alone is enough on
-        //      a *first* apply (no prior icon → fresh read) but often
-        //      insufficient when overwriting an existing `.VolumeIcon.icns`
-        //      in place — Finder's volume-icon cache is keyed by inode +
-        //      mtime + size, and a same-size atomic-replace can slip past
-        //      it. The NSWorkspace hint is the canonical "I just changed
-        //      this, please re-look at it now" push (used by `fileicon`,
-        //      `iconset`, and similar CLIs).
+        //   • the volume URL (the directory containing .VolumeIcon.icns)
+        //   • the icns file URL itself (Finder treats the leading-dot
+        //     hidden path as its own cache entry)
+        //
+        // Notifying only the volume URL was enough on a *first* apply
+        // (no prior cache entry) but failed reliably on overwrites — same
+        // hash on disk as Sigil's saved copy, but Finder kept showing the
+        // previously-applied icon. So: bump mtime AND notify on both
+        // paths. `iconset` and `fileicon` (the popular custom-icon CLIs)
+        // do the same dual-notification dance.
+        let iconURL = url.appendingPathComponent(iconFilename)
         utimes(url.path, nil)
-        NSWorkspace.shared.noteFileSystemChanged(url.path)
+        utimes(iconURL.path, nil)
+
+        let workspace = NSWorkspace.shared
+        workspace.noteFileSystemChanged(url.path)
+        workspace.noteFileSystemChanged(iconURL.path)
     }
 
     private static func freeSpaceBytes(at url: URL) -> Int? {
