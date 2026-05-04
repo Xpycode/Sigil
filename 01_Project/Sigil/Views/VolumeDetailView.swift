@@ -109,9 +109,7 @@ struct VolumeDetailView: View {
     private func rememberedDetail(_ record: VolumeRecord) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
-                Image(systemName: "externaldrive")
-                    .font(.system(size: 56, weight: .light))
-                    .foregroundStyle(Theme.secondaryText)
+                rememberedHeaderIcon
                 VStack(alignment: .leading, spacing: 4) {
                     Text(record.name)
                         .font(.system(size: 22, weight: .semibold))
@@ -145,6 +143,7 @@ struct VolumeDetailView: View {
             }
         }
         .padding(24)
+        .task(id: record.identity.raw) { loadCurrentIcon(for: record.identity) }
         .sheet(isPresented: $showForgetConfirm) {
             ConfirmationSheet(
                 title: "Forget '\(record.name)'?",
@@ -163,9 +162,10 @@ struct VolumeDetailView: View {
 
     private func header(_ info: VolumeInfo) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: "externaldrive.fill")
-                .font(.system(size: 56, weight: .light))
-                .foregroundStyle(Theme.accent)
+            // Show the committed icon (what's actually on the volume) — keeps
+            // the header as a quiet visual confirmation distinct from the
+            // editor canvas, which shows the in-progress preview.
+            headerIcon
             VStack(alignment: .leading, spacing: 4) {
                 Text(info.name)
                     .font(.system(size: 22, weight: .semibold))
@@ -179,6 +179,38 @@ struct VolumeDetailView: View {
                 .foregroundStyle(Theme.secondaryText)
             }
             Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private var headerIcon: some View {
+        if let image = currentIcon {
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        } else {
+            Image(systemName: "externaldrive.fill")
+                .font(.system(size: 56, weight: .light))
+                .foregroundStyle(Theme.accent)
+        }
+    }
+
+    /// Same as `headerIcon` but with the unmounted-volume fallback (outline
+    /// glyph in secondary text colour) when no cached icon exists.
+    @ViewBuilder
+    private var rememberedHeaderIcon: some View {
+        if let image = currentIcon {
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        } else {
+            Image(systemName: "externaldrive")
+                .font(.system(size: 56, weight: .light))
+                .foregroundStyle(Theme.secondaryText)
         }
     }
 
@@ -429,12 +461,16 @@ struct VolumeDetailView: View {
     }
 
     private func loadCurrentIcon(for info: VolumeInfo) {
-        guard let id = info.identity else {
+        loadCurrentIcon(for: info.identity)
+    }
+
+    private func loadCurrentIcon(for identity: VolumeIdentity?) {
+        guard let identity else {
             currentIcon = nil
             return
         }
         Task {
-            let data = try? IconCache.loadIcns(for: id)
+            let data = try? IconCache.loadIcns(for: identity)
             let image = data.flatMap { NSImage(data: $0) }
             await MainActor.run { self.currentIcon = image }
         }
@@ -526,6 +562,13 @@ struct VolumeDetailView: View {
         guard let identity else { return }
         do {
             try await appState.forget(identity: identity)
+            // Mirror performReset: editor must reset so the canvas, header,
+            // and note don't keep showing the just-forgotten state.
+            pendingSource = nil
+            cachedSource = nil
+            previewImage = nil
+            pendingNote = ""
+            currentIcon = nil
             statusMessage = "✓ Forgotten."
         } catch {
             errorMessage = "✗ \(error.localizedDescription)"

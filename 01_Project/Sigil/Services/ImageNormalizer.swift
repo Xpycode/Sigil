@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import CoreGraphics
 
 /// Loads a source image and returns a 1024×1024 `NSImage` ready to be
 /// rasterized at smaller sizes by `IconsetWriter`. Applies Fit (transparent
@@ -11,6 +12,7 @@ enum ImageNormalizer {
     enum Error: LocalizedError {
         case unreadable(URL)
         case invalidDimensions(NSSize)
+        case contextAllocationFailed
 
         var errorDescription: String? {
             switch self {
@@ -18,16 +20,26 @@ enum ImageNormalizer {
                 return "Could not decode image at \(url.lastPathComponent)."
             case .invalidDimensions(let size):
                 return "Source image has invalid dimensions (\(Int(size.width))×\(Int(size.height)))."
+            case .contextAllocationFailed:
+                return "Could not allocate sRGB drawing context."
             }
         }
     }
 
     /// Load the source image and draw it into a square 1024-pt canvas.
+    ///
+    /// **Color-profile note:** `NSImage(size:flipped:drawingHandler:)` builds
+    /// a context with an unspecified color space, and on wide-gamut Macs
+    /// (Display P3 default since the M-series) the implicit destination ends
+    /// up P3-tagged. Drawing an sRGB source into a P3 destination shifts
+    /// neutral metallics warm (silver → gold). Build the context explicitly
+    /// against `CGColorSpace.sRGB` so the icon round-trips its colours
+    /// correctly through `IconsetWriter` → PNG → `iconutil` → Finder.
     static func normalize(source: URL, mode: FitMode, zoom: Double = 1.0) throws -> NSImage {
-        guard let source = NSImage(contentsOf: source) else {
+        guard let nsSource = NSImage(contentsOf: source) else {
             throw Error.unreadable(source)
         }
-        let sourceSize = source.size
+        let sourceSize = nsSource.size
         guard sourceSize.width > 0, sourceSize.height > 0 else {
             throw Error.invalidDimensions(sourceSize)
         }
@@ -35,10 +47,34 @@ enum ImageNormalizer {
         let canvas = NSSize(width: canonicalSize, height: canonicalSize)
         let drawRect = computeDrawRect(sourceSize: sourceSize, canvasSize: canvas, mode: mode, zoom: zoom)
 
-        let image = NSImage(size: canvas, flipped: false) { _ in
-            source.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1.0)
-            return true
+        guard
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+            let cgContext = CGContext(
+                data: nil,
+                width: Int(canvas.width),
+                height: Int(canvas.height),
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else {
+            throw Error.contextAllocationFailed
         }
+
+        let nsContext = NSGraphicsContext(cgContext: cgContext, flipped: false)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = nsContext
+        nsContext.imageInterpolation = .high
+        nsSource.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        NSGraphicsContext.restoreGraphicsState()
+
+        guard let cgImage = cgContext.makeImage() else {
+            throw Error.contextAllocationFailed
+        }
+        let rep = NSBitmapImageRep(cgImage: cgImage)
+        let image = NSImage(size: canvas)
+        image.addRepresentation(rep)
         return image
     }
 

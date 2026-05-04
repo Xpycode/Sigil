@@ -27,6 +27,129 @@ This file tracks the **WHY** behind technical and design decisions. Append-only,
 
 ## Decisions
 
+### 2026-05-04 — Icon pipeline: explicit sRGB CGContext (not `.deviceRGB` / `NSImage(size:flipped:)`)
+
+**Context:** v1.0.1 smoke test surfaced a colour-shift bug: an Angelbird AV PRO
+SE CFexpress B silver-card source rendered as visibly gold/warm in the saved
+`.VolumeIcon.icns` (verified in Quick Look). Same source had rendered correctly
+silver in earlier sessions. Two root causes in the icon pipeline:
+
+1. **`ImageNormalizer.normalize`** built its 1024×1024 canvas with
+   `NSImage(size:flipped:drawingHandler:)`. Per Apple Developer Forums thread
+   728687 ("How To Resize An Image and Retain Wide Color Gamut"), drawing
+   handlers create a context with **unspecified** colour space — the
+   destination ends up tagged with whatever the implicit context happens to
+   be, which on Sonoma+ wide-gamut displays defaults to a P3-like profile.
+2. **`IconsetWriter.renderPNG`** allocated its `NSBitmapImageRep` with
+   `colorSpaceName: .deviceRGB`. `.deviceRGB` is **device-dependent**: on a
+   Display P3 Mac (every M-series MacBook Pro, every Studio Display), this
+   resolves to a P3 destination. Drawing an sRGB-tagged source into a P3
+   destination triggers a colour-space conversion that warps neutral
+   metallics — silver → gold is the characteristic artifact.
+
+Compounded, the pipeline tagged its PNGs with the device profile, embedded
+them in the icns, and Finder rendered the P3-encoded silver back on a P3
+display as visibly warm. The bug was latent on every wide-gamut Mac since
+shipping; it just hadn't surfaced because the dev's earlier smoke tests had
+landed on a colour profile that happened to round-trip cleanly.
+
+**Options Considered:**
+1. **Explicit sRGB throughout the pipeline** — build both contexts via
+   `CGContext(... space: CGColorSpace(name: CGColorSpace.sRGB), ...)` and
+   wrap in `NSGraphicsContext` for AppKit drawing. Apple's recommended
+   pattern (Developer Forums thread 679891). Source images get colour-mapped
+   into sRGB once at normalize time; PNGs are tagged sRGB; Finder renders
+   sRGB; round-trip is stable.
+2. **Explicit Display P3 throughout** — preserve wide gamut for sources that
+   have it. Marginal benefit (icons are small UI surfaces), and risks
+   looking off when the user moves the volume to a non-P3 display.
+3. **Use `NSColorSpaceName.calibratedRGB`** — generic device-independent RGB.
+   Closer to sRGB than `.deviceRGB` but still imprecise; depends on AppKit's
+   internal mapping and could shift again across macOS releases.
+
+**Decision:** Option 1. Explicit sRGB in both places via `CGContext` →
+`NSGraphicsContext(cgContext:flipped:)` → AppKit drawing → `cgContext.makeImage()` →
+`NSBitmapImageRep(cgImage:)`. ICC profile is unambiguous, deterministic, and
+matches what Finder/Dock/`iconutil` expect from icon assets.
+
+**Rationale:** Volume icons aren't wide-gamut content — they're small UI
+glyphs displayed at 16–1024 px. sRGB covers all the colour Finder will ever
+display them in. The explicit `CGColorSpace.sRGB` context removes any
+ambiguity about destination tagging, so the same source produces the same
+output regardless of which display the dev (or user) happens to have plugged
+in. The fix lives at the two pipeline endpoints (normalize + per-tier PNG
+encode), so it covers both the in-app preview and the on-disk icns.
+
+**Trade-offs accepted:** Wide-gamut sources (Display P3 PNGs from photo apps)
+get clipped to sRGB gamut at normalize time. Saturated reds/greens lose ~5%
+chroma. Acceptable for UI iconography.
+
+**Revisit if:** Apple introduces a new ICNS-with-color-profile container
+format, or Finder starts rendering volume icons in wide-gamut contexts where
+P3 would visibly improve fidelity. (Neither has happened as of macOS 15.)
+
+**Affected:** `01_Project/Sigil/Services/ImageNormalizer.swift` (replaced
+`NSImage(size:flipped:drawingHandler:)` with explicit-sRGB CGContext path,
+added `.contextAllocationFailed` error case),
+`01_Project/Sigil/Services/IconsetWriter.swift` (replaced `.deviceRGB`
+NSBitmapImageRep with explicit-sRGB CGContext path, added
+`.contextAllocationFailed` error case).
+
+**Sources:** Apple Developer Forums [thread 728687](https://developer.apple.com/forums/thread/728687)
+("How To Resize An Image and Retain Wide Color Gamut"), [thread 679891](https://developer.apple.com/forums/thread/679891)
+("How to create RGBA CGColorSpace / bitmap CGContext").
+
+---
+
+### 2026-05-04 — Detail header shows actual icon (not SF Symbol placeholder)
+
+**Context:** `VolumeDetailView` rendered its 56-pt header icon as a hardcoded
+SF Symbol (`externaldrive.fill` for mounted, `externaldrive` for remembered)
+even when the volume had a real custom icon applied. Since the sidebar rows
+already showed real cached thumbnails, the detail view felt inconsistent
+with itself ("the small one knows but the big one doesn't").
+
+**Decision:** Header now shows `currentIcon` (loaded from `IconCache` via
+`loadCurrentIcon(for:)`) when available; falls back to the SF Symbol when
+no cached icon exists.
+
+**Live preview vs committed state:** The header reflects only `currentIcon`
+(the committed on-disk icon), not `previewImage` (the live editor preview).
+This keeps the header as a quiet visual confirmation of "this is what's on
+the drive" while the canvas remains the editing surface. Watching both
+animate during a slider drag would be busy.
+
+**Both code paths:** Mounted and remembered headers both updated. The
+remembered path also gained a `.task(id: record.identity.raw)` that calls
+the now-shared `loadCurrentIcon(for: VolumeIdentity?)` helper, since the
+disconnected-volume detail view never loaded the icon before.
+
+**Affected:** `01_Project/Sigil/Views/VolumeDetailView.swift` (extracted
+`headerIcon` / `rememberedHeaderIcon` view-builders, refactored
+`loadCurrentIcon` to share between mounted and remembered paths, wired
+remembered's `.task(id:)` loader).
+
+---
+
+### 2026-05-04 — `performForget` resets editor state to match `performReset`
+
+**Context:** Tapping Forget left the editor in a half-forgotten state —
+canvas kept showing the just-rendered preview, note text persisted, etc.,
+even though the volume had been removed from `appState.remembered` and the
+header had reset to the generic drive icon. `performReset` already did the
+right cleanup; `performForget` only updated `statusMessage`.
+
+**Decision:** `performForget` now mirrors `performReset`'s editor reset
+(clears `pendingSource`, `cachedSource`, `previewImage`, `pendingNote`,
+`currentIcon`). The only difference between Reset and Forget remains the
+underlying service call — Reset strips the icon from disk, Forget just
+removes Sigil's record.
+
+**Affected:** `01_Project/Sigil/Views/VolumeDetailView.swift`
+(`performForget`).
+
+---
+
 ### 2026-05-04 — Removable-volume TCC: declare `NSRemovableVolumesUsageDescription`
 
 **Context:** After fixing the disk-space preflight (entry below), the apply path
