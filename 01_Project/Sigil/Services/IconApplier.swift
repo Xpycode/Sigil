@@ -92,9 +92,15 @@ actor IconApplier {
             throw Error.underlying(error)
         }
 
-        // Step 2: read-modify-write FinderInfo to set byte 8 = 0x04.
+        // Step 2: cycle the FinderInfo `kHasCustomIcon` flag (clear → set) so
+        // Finder sees a state transition, not just a same-bit re-write.
+        // First applies (flag not yet set) degrade to a plain set; overwrites
+        // (flag already set from a previous apply) get the toggle, which
+        // empirically punches through Finder's icon-services cache when
+        // `noteFileSystemChanged` alone wasn't enough. See decision log
+        // 2026-05-04 ("Finder cache invalidation, round 3").
         do {
-            try Self.setCustomIconFlag(on: volumeURL)
+            try Self.cycleCustomIconFlag(on: volumeURL)
         } catch {
             // Roll back the orphan icon file — otherwise we'd leave garbage.
             try? fm.removeItem(at: iconURL)
@@ -153,6 +159,21 @@ actor IconApplier {
     }
 
     // MARK: - Private helpers
+
+    /// Force a `kHasCustomIcon` state transition by clearing then setting
+    /// the flag. Bypasses Finder's icon-services cache, which on overwrites
+    /// otherwise sees "flag still set, no change" and serves the stale
+    /// cached icon.
+    ///
+    /// Safe with respect to other FinderInfo bytes (Finder colour labels
+    /// etc.): the underlying `clearCustomIconFlag` only touches byte 8 and
+    /// preserves the rest of the 32-byte blob; if the rest is all-zero, it
+    /// removes the xattr entirely (cleanest "fresh state" signal to
+    /// Finder), and `setCustomIconFlag` re-creates it with just byte 8 set.
+    private static func cycleCustomIconFlag(on volumeURL: URL) throws {
+        try clearCustomIconFlag(on: volumeURL)
+        try setCustomIconFlag(on: volumeURL)
+    }
 
     private static func setCustomIconFlag(on volumeURL: URL) throws {
         var info = (try XAttr.get(name: finderInfoKey, from: volumeURL.path)) ?? Data()
