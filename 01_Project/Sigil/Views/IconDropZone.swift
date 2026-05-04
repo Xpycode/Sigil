@@ -23,6 +23,7 @@ struct IconDropZone: View {
 
     @State private var isTargeted: Bool = false
     @State private var showPicker: Bool = false
+    @State private var isHovered: Bool = false
 
     private static let allowedImageTypes: [UTType] = [
         .png,
@@ -39,7 +40,24 @@ struct IconDropZone: View {
         .buttonStyle(.plain)
         .contentShape(Rectangle())
         .onHover { hovering in
-            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            // NSCursor.push/pop is a stack — if the view disappears while
+            // hovered (volume deselected, sheet appears, window loses key),
+            // SwiftUI doesn't fire onHover(false), so the pointing-hand
+            // cursor would leak globally. Track hover state and pop on
+            // disappear as a safety net.
+            if hovering {
+                NSCursor.pointingHand.push()
+                isHovered = true
+            } else {
+                NSCursor.pop()
+                isHovered = false
+            }
+        }
+        .onDisappear {
+            if isHovered {
+                NSCursor.pop()
+                isHovered = false
+            }
         }
         .fileImporter(
             isPresented: $showPicker,

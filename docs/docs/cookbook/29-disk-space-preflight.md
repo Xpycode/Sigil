@@ -30,16 +30,22 @@ import Foundation
 enum DiskSpace {
     /// Free bytes available for important (user-initiated) writes at the URL's volume.
     /// Falls back to the legacy key if the "important usage" key is unavailable.
+    ///
+    /// **Non-APFS gotcha:** `volumeAvailableCapacityForImportantUsageKey` is
+    /// APFS-specific. On ExFAT, FAT32, and HFS+ volumes (i.e. most external
+    /// drives, camera cards, cross-platform sticks) it returns `0` rather than
+    /// nil — so a plain `if let` would falsely report a full disk. Treat `0`
+    /// as "no answer" and fall through to `volumeAvailableCapacityKey`.
     static func availableCapacity(for url: URL) -> Int64? {
         let keys: Set<URLResourceKey> = [
             .volumeAvailableCapacityForImportantUsageKey,
             .volumeAvailableCapacityKey
         ]
         guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
-        if let important = values.volumeAvailableCapacityForImportantUsage {
+        if let important = values.volumeAvailableCapacityForImportantUsage, important > 0 {
             return important
         }
-        if let raw = values.volumeAvailableCapacity {
+        if let raw = values.volumeAvailableCapacity, raw > 0 {
             return Int64(raw)
         }
         return nil
@@ -79,6 +85,14 @@ enum DiskSpace {
 For "does this job fit?" checks, always use the **important usage** key. Users will
 resent the app refusing to run when Finder shows plenty of free space — the important
 usage figure matches what Finder reports.
+
+> ⚠️ **Non-APFS volumes return 0 from the important-usage key.** ExFAT (camera cards,
+> cross-platform drives), FAT32, and HFS+ have no purgeable-storage concept, so the
+> "important usage" query returns `0`, not nil. Always pair it with a fallback to
+> `volumeAvailableCapacityKey` and treat `0` as "no answer." Without this, your
+> preflight will reject every write to every external camera card.
+
+
 
 ## Preflight inside a job runner
 

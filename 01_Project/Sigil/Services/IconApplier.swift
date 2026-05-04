@@ -46,7 +46,9 @@ actor IconApplier {
             case .readOnly(let url):
                 return "Can't write to '\(url.lastPathComponent)': volume is read-only."
             case .permissionDenied(let url):
-                return "Permission denied writing to '\(url.lastPathComponent)'."
+                // Most commonly TCC denying removable-volume access (macOS 13+).
+                // Point the user at the exact System Settings pane to fix it.
+                return "Can't write to '\(url.lastPathComponent)' — Sigil needs Removable Volumes access. Open System Settings → Privacy & Security → Files & Folders."
             case .diskFull(let url, let required, let available):
                 let have = available.map { ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file) } ?? "unknown"
                 let need = ByteCountFormatter.string(fromByteCount: Int64(required), countStyle: .file)
@@ -183,12 +185,21 @@ actor IconApplier {
     }
 
     private static func freeSpaceBytes(at url: URL) -> Int? {
-        let keys: Set<URLResourceKey> = [.volumeAvailableCapacityForImportantUsageKey]
-        guard let values = try? url.resourceValues(forKeys: keys),
-              let bytes = values.volumeAvailableCapacityForImportantUsage else {
-            return nil
+        // ForImportantUsage is APFS-only — on ExFAT/FAT32/HFS+ it returns 0,
+        // not nil, so a plain `if let` would falsely report a full disk.
+        // Treat 0 as "no answer" and fall through to the legacy raw key.
+        let keys: Set<URLResourceKey> = [
+            .volumeAvailableCapacityForImportantUsageKey,
+            .volumeAvailableCapacityKey,
+        ]
+        guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
+        if let important = values.volumeAvailableCapacityForImportantUsage, important > 0 {
+            return Int(important)
         }
-        return Int(bytes)
+        if let raw = values.volumeAvailableCapacity, raw > 0 {
+            return raw
+        }
+        return nil
     }
 
     private static func mapCocoaWriteError(_ err: CocoaError, url: URL) -> Error {

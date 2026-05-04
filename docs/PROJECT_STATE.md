@@ -11,12 +11,12 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** **done** — v1.0.0 shipped
-- **Phase:** shipped
-- **Focus:** Release is live → https://github.com/Xpycode/Sigil/releases/tag/v1.0.0. Next work is test-coverage backfill for zoom pipeline + `IconCache.saveSource`, then whatever warrants a v1.1.
-- **Status:** shipped
-- **Last updated:** 2026-04-20 (night)
-- **Test count:** 31 green (zoom + IconCache regression tests still pending — next session)
+- **Funnel:** **done** — v1.0.0 shipped; **v1.0.1 built + smoke-tested, awaiting tag/notarize**
+- **Phase:** shipped (v1.0.1 in flight)
+- **Focus:** v1.0.1 fixes two v1.0.0 bugs surfaced by user testing on real ExFAT card: (1) APFS-only disk-space probe falsely reported "Zero KB" on non-APFS volumes; (2) missing `NSRemovableVolumesUsageDescription` made macOS silently deny removable-volume writes. Both fixed; smoke-test on XH2S-512 CFExpress B card passed end-to-end. Open question: ship v1.0.1 as bug-fix-only or bundle the three quality items from the 2026-04-20-d code review.
+- **Status:** v1.0.1 candidate built (build 2), local Debug verified
+- **Last updated:** 2026-05-04
+- **Test count:** 31 green (zoom + IconCache regression tests still pending — slated for v1.1)
 - **Repo:** `github.com/Xpycode/Sigil` — `main` at `fa3ea86`. Tag `v1.0.0` pushed; DMG (12 MB, notarized + stapled) attached to the release. 9 wave tags + 3 feature branches in history (`feature/ui-redesign-zoom`, `feature/drop-fit-fill-ui`, `feature/release-polish-v1.0.0`).
 - **App icon:** Wax-seal, blackletter S on obsidian (Kling-generated from Prompt A). `AppIcon.appiconset` wired at 10 sizes.
 - **Signing:** Managed Developer ID Application (team `FDMSRXXN73`, Luces Umbrarum). No local Developer ID cert needed — Xcode handles via Apple's services.
@@ -61,11 +61,11 @@
 
 ## Active Decisions
 <!-- Last 3-5 decisions only. Full history in decisions.md -->
+- 2026-05-04: **Removable-volume TCC** — declared `NSRemovableVolumesUsageDescription` in Info.plist with user-validated copy ("To apply the icon you chose, Sigil writes a small icon file to the drive's root so it appears in Finder."). Without this key, macOS 13+ silently denied writes to removable-volume roots, with no in-app or System Settings path to grant access. Bumped to v1.0.1 / build 2; improved `permissionDenied` error to point at the System Settings pane.
+- 2026-05-04: **Disk-space preflight: dual-key probe, skip-on-unknown** — `volumeAvailableCapacityForImportantUsageKey` is APFS-only and returns `0` on ExFAT/FAT32/HFS+. Added `volumeAvailableCapacityKey` fallback with `> 0` guard; on truly unknown capacity, skip the preflight and let the kernel report ENOSPC at write time. Cookbook 29 had the same flaw — fixed at source.
 - 2026-04-20 (evening): **Click-to-browse consolidation** — whole canvas is the file-picker affordance; inline `xmark.circle.fill` overlay replaces the Clear button; preview image clipped to inner-radius 8 to visually parallel outer radius 10. Zoom slider lives in the right column, vertically centered against the canvas with the action buttons.
 - 2026-04-20 (evening): **README follows CropBatch template** — inline H1 icon, 6 badges, screenshots-above-features, keyboard-shortcut table. Establishes Luces Umbrarum house style across app releases.
 - 2026-04-20: **Zoom is the single framing axis.** Fit/Fill picker removed from UI (invisible on square icons). Zoom 1.0 = Fit-equivalent; zoom = aspect_ratio = Fill-equivalent. `VolumeRecord.fitMode` kept for legacy back-compat. Pan deferred as future second axis.
-- 2026-04-20: **Fast preview path** — `IconRenderer.preview` stops at `ImageNormalizer.normalize` (skips `iconutil` subprocess) so zoom slider feels live.
-- 2026-04-20: `IconCache.saveSource` guards against `src == dest` (destructive self-delete bug caught during re-zoom-from-cache flow).
 
 ## Open questions
 - App icon design starting point (Wave 9 only — not blocking Build).

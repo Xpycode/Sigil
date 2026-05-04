@@ -27,6 +27,118 @@ This file tracks the **WHY** behind technical and design decisions. Append-only,
 
 ## Decisions
 
+### 2026-05-04 — Removable-volume TCC: declare `NSRemovableVolumesUsageDescription`
+
+**Context:** After fixing the disk-space preflight (entry below), the apply path
+surfaced a second failure: macOS returned `EACCES` from `Data.write` to the
+ExFAT volume root. Cause: since macOS 13 Ventura, even non-sandboxed apps need
+TCC permission to write to removable-volume roots. Without
+`NSRemovableVolumesUsageDescription` in `Info.plist`, macOS refuses the write
+**without ever showing a prompt** — the user has no way to grant access from
+inside the app, and the System Settings → Files & Folders pane shows no Sigil
+entry to flip on.
+
+This was missed during initial development for the same reason as the
+disk-space bug: all dev testing happened on local APFS volumes
+(`~/Library/Application Support/Sigil/`, internal Macintosh HD), where the
+Removable Volumes TCC bucket doesn't apply.
+
+**Options Considered:**
+1. **Add `NSRemovableVolumesUsageDescription` with a clear copy string** — the
+   correct, Apple-blessed path. User gets a one-time prompt on first apply;
+   System Settings shows Sigil under Files & Folders → Removable Volumes
+   forever after.
+2. **Add a runtime check that detects EACCES and pops a custom dialog
+   explaining how to fix it** — works around the missing Info.plist key but
+   still requires the user to leave the app and toggle a Settings switch
+   manually. Strictly worse UX.
+3. **Switch to a privileged helper / SMAppService model** — overkill; would
+   require codesigning a helper, install/remove ceremony, persistent launchd
+   job. Wildly disproportionate for "write a 1MB icon file."
+
+**Decision:** Option 1. Added the key with the string:
+> "To apply the icon you chose, Sigil writes a small icon file to the drive's
+> root so it appears in Finder."
+
+Chose this wording (combo of two earlier candidates AB1/AB3) because it (a)
+mirrors the action the user just took ("apply"), (b) explains *what* gets
+written so the request feels honest and bounded, and (c) avoids the redundant
+"needs permission to" framing that the OS chrome already provides.
+
+Also improved `IconApplier.Error.permissionDenied`'s message to point users at
+the exact System Settings pane, since some users will tap "Don't Allow" on the
+prompt and need to course-correct without guesswork.
+
+**Rationale:** The string is permanent UX — it appears in the macOS prompt
+forever and in the System Settings pane forever — so it's worth getting right.
+Apple rejects vague strings ("for app functionality"); concrete strings tied
+to user-visible actions sail through review.
+
+**Trade-offs accepted:** v1.0.0 users who already installed will see a fresh
+permission prompt on first apply after upgrading. This is the correct system
+behavior but should be called out in v1.0.1 release notes.
+
+**Revisit if:** Apple changes TCC behavior again (Sequoia / macOS 16 has
+already tightened removable-volume rules once more — worth monitoring).
+
+**Affected:** `01_Project/Sigil/Info.plist` (added key, bumped version to
+1.0.1 / build 2), `01_Project/Sigil/Services/IconApplier.swift` (improved
+permissionDenied error copy).
+
+**Note for later cleanup:** `Sigil.xcodeproj/project.pbxproj` already had
+`MARKETING_VERSION = 1.0.1` and `CURRENT_PROJECT_VERSION = 101` set, but they
+were inert because `GENERATE_INFOPLIST_FILE = NO` and Info.plist used literal
+strings rather than `$(MARKETING_VERSION)` substitution. Consider switching
+Info.plist to substitution form so version lives in one place — or just
+delete the dormant pbxproj entries.
+
+---
+
+### 2026-05-04 — Disk-space preflight: dual-key probe, skip-on-unknown
+
+**Context:** v1.0.0 user reported that applying an icon to an ExFAT CFExpress B card
+failed with "Volume 'XH2S-512' is full — need 1.2 MB, have Zero KB." The card was
+nowhere near full. Root cause: `IconApplier.freeSpaceBytes` queried only
+`volumeAvailableCapacityForImportantUsageKey`, which is APFS-specific and returns
+`0` (not nil) on ExFAT/FAT32/HFS+. Since Sigil targets *external volumes* — and
+external volumes are overwhelmingly ExFAT — this silently broke the core flow on
+the most common real-world case.
+
+**Options Considered:**
+1. **Use only the legacy `volumeAvailableCapacityKey`** — works everywhere but
+   ignores APFS purgeable storage, so preflight could falsely reject on APFS
+   volumes that Finder shows as having space.
+2. **Try ForImportantUsage first, fall back to legacy when it returns nil OR 0** —
+   correct for both filesystems; matches what Finder reports on APFS and gives a
+   real number on ExFAT.
+3. **Keep the APFS-only key but skip the preflight entirely when unavailable** —
+   defers all errors to ENOSPC at write time. Worse UX: user sees a generic
+   write failure with the partially-written `.VolumeIcon.icns` left on disk.
+
+**Decision:** Option 2. Dual-key with `> 0` guard on the APFS key. When **both**
+keys return nil/0, return nil and let the preflight skip the check (the `if let
+available` short-circuits) — i.e. **skip-on-unknown, attempt the write**.
+
+**Rationale:** Better to attempt and surface a real ENOSPC than to falsely block
+when measurement fails. The atomic write in step 1 means a true ENOSPC leaves
+nothing partial on the volume; only the FinderInfo step writes more bytes, and
+that's <100 bytes, so the slack-byte budget covers it.
+
+**Trade-offs accepted:** On a genuinely-full unmeasurable volume, the user sees
+a kernel ENOSPC error from `Data.write` instead of our friendlier "Volume is
+full" message. Acceptable — that case is vanishingly rare (every macOS-supported
+filesystem reports capacity), and the kernel message is still actionable.
+
+**Revisit if:** We add support for unusual filesystems (NTFS via paragon,
+network mounts, FUSE) where capacity reporting is genuinely unreliable. At that
+point, consider a small probe-write strategy.
+
+**Affected:** `01_Project/Sigil/Services/IconApplier.swift` (freeSpaceBytes),
+`docs/docs/cookbook/29-disk-space-preflight.md` (DiskSpace.availableCapacity
+example had the same flaw — fixed inline + added explicit non-APFS warning).
+
+---
+
 ### 2026-04-19 — Product name: Sigil; bundle ID: `com.lucesumbrarum.sigil`
 
 **Context:** Working codename was "CVI" (Custom Volume Icons) — descriptive but generic. User has personal Apple Developer namespace `com.lucesumbrarum` (Latin: "lights of shadows" / chiaroscuro). Brainstorm produced six candidates spanning literal (DriveIcon), heraldic (Crest, Marque), Latin (Lares, Tessera), and English-evocative (Sigil, Imprint).

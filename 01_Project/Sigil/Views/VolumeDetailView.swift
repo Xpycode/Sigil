@@ -231,7 +231,11 @@ struct VolumeDetailView: View {
                                 .buttonStyle(.borderless)
                                 .font(.caption)
                                 .foregroundStyle(Theme.secondaryText)
-                                .disabled(pendingZoom == 1.0)
+                                // Tolerance matches the %.2f display precision —
+                                // Reset disables iff the label reads "1.00×".
+                                // Float-equality on Slider-bound Doubles is
+                                // unreliable due to IEEE-754 drift.
+                                .disabled(abs(pendingZoom - 1.0) < 0.005)
                         }
                         Slider(value: $pendingZoom, in: 0.5...3.0)
                             .disabled(!isZoomableSource)
@@ -279,7 +283,10 @@ struct VolumeDetailView: View {
                             .transition(.opacity)
                     }
                 }
-                .frame(width: 160, alignment: .leading)
+                // 200pt (was 160) — gives the zoom slider track and the
+                // Zoom / 1.00× / Reset row enough breathing room without
+                // overshadowing the canvas on the left.
+                .frame(width: 200, alignment: .leading)
 
                 Spacer(minLength: 0)
             }
