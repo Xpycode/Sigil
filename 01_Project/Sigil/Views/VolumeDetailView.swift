@@ -74,7 +74,6 @@ struct VolumeDetailView: View {
         .padding(24)
         .task(id: info.id) { loadInitialState(for: info) }
         .onChange(of: pendingSource) { _, _ in renderPreview() }
-        .onChange(of: pendingZoom) { _, _ in renderPreview() }
         .onChange(of: pendingNote) { _, newValue in
             scheduleNoteSave(info: info, note: newValue)
         }
@@ -238,30 +237,6 @@ struct VolumeDetailView: View {
                 )
 
                 VStack(alignment: .leading, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text("Zoom")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Theme.secondaryText)
-                            Spacer()
-                            Text(String(format: "%.2f×", pendingZoom))
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(Theme.tertiaryText)
-                            Button("Reset") { pendingZoom = 1.0 }
-                                .buttonStyle(.borderless)
-                                .font(.caption)
-                                .foregroundStyle(Theme.secondaryText)
-                                // Tolerance matches the %.2f display precision —
-                                // Reset disables iff the label reads "1.00×".
-                                // Float-equality on Slider-bound Doubles is
-                                // unreliable due to IEEE-754 drift.
-                                .disabled(abs(pendingZoom - 1.0) < 0.005)
-                        }
-                        Slider(value: $pendingZoom, in: 0.5...3.0)
-                            .disabled(!isZoomableSource)
-                    }
-                    .padding(.bottom, 8)
-
                     Button(action: { Task { await performApply(info) } }) {
                         if isApplying {
                             ProgressView().progressViewStyle(.circular).controlSize(.small)
@@ -399,24 +374,14 @@ struct VolumeDetailView: View {
         pendingSource ?? cachedSource
     }
 
-    /// `.icns` is already rasterized; zoom/mode do nothing. Everything else is
-    /// re-renderable through ImageNormalizer.
-    private var isZoomableSource: Bool {
-        guard let src = effectiveSource else { return false }
-        return src.pathExtension.lowercased() != "icns"
-    }
-
     private func canApply(_ info: VolumeInfo) -> Bool {
         guard !isApplying else { return false }
-        guard let id = info.identity else { return false }
-        // Always apply-able when user picked a new source.
-        if pendingSource != nil { return true }
-        // Otherwise only if we have a re-renderable cached source AND the
-        // user has moved sliders away from whatever's stored on the record.
-        guard let cachedSource,
-              cachedSource.pathExtension.lowercased() != "icns" else { return false }
-        guard let record = appState.remembered.first(where: { $0.identity == id }) else { return false }
-        return pendingMode != record.fitMode || pendingZoom != record.zoom
+        guard info.identity != nil else { return false }
+        // Apply requires a freshly picked source. With the zoom/mode controls
+        // gone (v1.0.1 — Finder cache makes mid-session re-renders unreliable
+        // to surface), there's no other reason to re-apply on the same
+        // already-applied icon.
+        return pendingSource != nil
     }
 
     private func loadInitialState(for info: VolumeInfo) {

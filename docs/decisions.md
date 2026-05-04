@@ -27,6 +27,92 @@ This file tracks the **WHY** behind technical and design decisions. Append-only,
 
 ## Decisions
 
+### 2026-05-04 — Drop the zoom slider from v1.0.1
+
+**Context:** v1.0.0 shipped a Zoom slider (0.5×–3.0×) for adjusting how the
+source image fills the icon canvas. v1.0.1 testing surfaced that the slider
+*technically* works — the rendered `.VolumeIcon.icns` on disk correctly
+reflects the chosen zoom (verified by `shasum` matching Sigil's cached copy
+to the on-volume file) — but **Finder's icon-services cache reliably refuses
+to refresh** when an icon is overwritten on a volume that already had a
+custom icon. The user sees the zoom slider, drags it, clicks Apply, status
+reads "Applied," but Finder keeps showing the previously-applied icon.
+
+Three rounds of cache-invalidation tricks all failed to break through:
+
+1. `utimes(volumeURL, nil)` — the original v1.0.0 nudge.
+2. Pair `utimes` with `NSWorkspace.shared.noteFileSystemChanged` on the
+   volume URL.
+3. Same as (2) but on **both** the volume URL and the icns file URL.
+4. (3) plus a `kHasCustomIcon` FinderInfo flag toggle (clear → set) on every
+   apply, forcing a state transition Finder couldn't ignore.
+
+None reliably refresh the volume thumbnail on overwrite. The only thing
+that always works is eject + remount (or `killall Finder`), neither of
+which Sigil should silently inflict.
+
+**Options Considered:**
+
+1. **Drop the zoom slider** — remove the UI and supporting state. Editor
+   becomes Drop → Apply. First-time applies still work correctly (no prior
+   cached icon, Finder reads fresh); the broken-feeling re-apply path
+   stops existing.
+2. **Keep the slider but mark it "experimental" in the UI** — preserves the
+   feature for power users who'll eject/remount. Invites confusion for
+   everyone else.
+3. **Keep the slider, add a "Refresh in Finder" button that programmatically
+   ejects and remounts the volume** — guarantees cache invalidation.
+   Disruptive (the volume disappears for a moment); requires DiskArbitration
+   wiring; significant new code surface for a small payoff.
+4. **Build a real fix** — there isn't one available within Sigil's scope.
+   Apple owns this cache.
+
+**Decision:** Option 1. Slider removed. `pendingZoom` and `pendingMode`
+remain as `@State` (defaulting to 1.0 / .fit) so the apply pipeline
+signature stays unchanged — they're effectively constants now. The Apply
+pipeline still threads them through `IconRenderer.render → ImageNormalizer.normalize`
+exactly as before; just no UI to vary them.
+
+`canApply` simplified accordingly: Apply enables only when there's a fresh
+`pendingSource`. No more re-apply-on-same-source path (which was the
+broken one).
+
+**Rationale:** Sigil's promise is "drop image → that's the icon." A feature
+that's correct on disk but visibly broken in Finder fails to deliver on
+that promise more than it adds. The first-apply case (no prior icon)
+still works — users get custom icons. They just don't get a slider for
+adjusting the zoom of an already-applied icon. The trade-off feels right
+for a small focused tool.
+
+**Trade-offs accepted:**
+- Users who want a center-crop ("just the 512 GB label, not the whole
+  card") have to pre-crop in Preview before dropping. Same as the Fit/Fill
+  removal in 2026-04-20: minor capability lost, major confusion avoided.
+- Existing `VolumeRecord` records carry `zoom` and `fitMode` fields that
+  are now ignored at apply time. Kept for back-compat; no migration; new
+  applies always write `1.0` / `.fit`. Old records with non-1.0 zoom won't
+  re-render at that zoom on re-apply, but with the slider gone the user
+  has no way to ask for that anyway.
+
+**Revisit if:** Apple ships a reliable Finder volume-icon cache invalidation
+API, or we add a programmatic eject/remount feature for some other reason
+(at which point zoom can ride along).
+
+**Affected:**
+- `01_Project/Sigil/Views/VolumeDetailView.swift` — removed the zoom HStack
+  + Slider + `.onChange(of: pendingZoom)`; removed `isZoomableSource`;
+  simplified `canApply` to `pendingSource != nil`. `pendingZoom` and
+  `pendingMode` `@State` retained as constants.
+
+**What we did NOT revert:** the cache-invalidation work from this session
+(`noteFileSystemChanged` on both paths + FinderInfo flag toggle in
+`IconApplier`) is kept. It doesn't help re-applies enough to save zoom,
+but it's correct hygiene for first-applies and might be enough for any
+future Sigil feature that re-touches a volume's custom icon. Documented
+in earlier decision entries.
+
+---
+
 ### 2026-05-04 — Reset / Forget must reset zoom + mode too
 
 **Context:** `performReset` and `performForget` cleared most editor state
