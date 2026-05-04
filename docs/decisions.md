@@ -27,6 +27,24 @@ This file tracks the **WHY** behind technical and design decisions. Append-only,
 
 ## Decisions
 
+### 2026-05-04 — Reset / Forget must reset zoom + mode too
+
+**Context:** `performReset` and `performForget` cleared most editor state
+(`pendingSource`, `cachedSource`, `previewImage`, `pendingNote`,
+`currentIcon`) but left `pendingZoom` and `pendingMode` at whatever values
+the last Apply had set them to. After a Reset on a 3.00× icon, the slider
+stayed pinned at 3.00×. Reads as "Reset didn't fully reset."
+
+**Decision:** Both functions now also `pendingZoom = 1.0` and
+`pendingMode = .fit`. Trivial change; brings the editor to a clean,
+consistent post-Reset / post-Forget state matching what the user sees
+when they first select a fresh volume.
+
+**Affected:** `01_Project/Sigil/Views/VolumeDetailView.swift`
+(`performReset`, `performForget`).
+
+---
+
 ### 2026-05-04 — Finder cache invalidation: pair `utimes` with `noteFileSystemChanged`
 
 **Context:** v1.0.1 testing surfaced that re-applying an icon (with a new

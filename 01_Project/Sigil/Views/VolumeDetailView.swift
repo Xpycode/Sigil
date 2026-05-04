@@ -527,11 +527,17 @@ struct VolumeDetailView: View {
         errorMessage = nil
         do {
             try await appState.resetIcon(for: info)
+            // Full editor reset — bring slider/mode back to defaults too,
+            // not just the source/cache. Otherwise the slider stays at the
+            // last-applied zoom (e.g. 3.00×) after Reset, which reads as
+            // "Reset didn't fully reset."
             pendingSource = nil
             cachedSource = nil
             previewImage = nil
             pendingNote = ""
             currentIcon = nil
+            pendingZoom = 1.0
+            pendingMode = .fit
             statusMessage = "✓ Reset. Finder will revert within a few seconds."
         } catch {
             errorMessage = "✗ \(error.localizedDescription)"
@@ -543,13 +549,15 @@ struct VolumeDetailView: View {
         guard let identity else { return }
         do {
             try await appState.forget(identity: identity)
-            // Mirror performReset: editor must reset so the canvas, header,
-            // and note don't keep showing the just-forgotten state.
+            // Mirror performReset: editor must fully reset so the canvas,
+            // header, slider, mode, and note all return to their defaults.
             pendingSource = nil
             cachedSource = nil
             previewImage = nil
             pendingNote = ""
             currentIcon = nil
+            pendingZoom = 1.0
+            pendingMode = .fit
             statusMessage = "✓ Forgotten."
         } catch {
             errorMessage = "✗ \(error.localizedDescription)"
