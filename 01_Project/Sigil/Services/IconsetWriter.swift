@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import CoreGraphics
 
 /// Writes the 10 PNG files `iconutil -c icns` requires into a `.iconset`
 /// directory. Filenames follow Apple's convention:
@@ -37,6 +38,7 @@ enum IconsetWriter {
     enum Error: LocalizedError {
         case bitmapAllocationFailed(pixelSize: Int)
         case pngEncodingFailed(pixelSize: Int)
+        case contextAllocationFailed(pixelSize: Int)
 
         var errorDescription: String? {
             switch self {
@@ -44,6 +46,8 @@ enum IconsetWriter {
                 return "Could not allocate \(size)×\(size) bitmap."
             case .pngEncodingFailed(let size):
                 return "Could not encode \(size)×\(size) PNG."
+            case .contextAllocationFailed(let size):
+                return "Could not allocate \(size)×\(size) sRGB context."
             }
         }
     }
@@ -56,38 +60,48 @@ enum IconsetWriter {
         }
     }
 
-    /// Render `image` into a `pixelSize × pixelSize` PNG using `NSBitmapImageRep`
-    /// with high-quality interpolation.
+    /// Render `image` into a `pixelSize × pixelSize` PNG.
+    ///
+    /// Uses an explicit-sRGB `CGContext` instead of an `NSBitmapImageRep`
+    /// allocated with `colorSpaceName: .deviceRGB`. `.deviceRGB` is
+    /// device-dependent — on a wide-gamut Mac (Display P3 default since the
+    /// M-series) it produces a P3-tagged bitmap, which Finder later renders
+    /// as visibly warm/over-saturated (silver metallics shift to gold).
+    /// Targeting `CGColorSpace.sRGB` makes the PNG's profile match what
+    /// `iconutil` and Finder expect, eliminating the colour shift.
     static func renderPNG(image: NSImage, pixelSize: Int) throws -> Data {
-        guard let rep = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: pixelSize,
-            pixelsHigh: pixelSize,
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bitmapFormat: [],
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        ) else {
+        guard
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+            let cgContext = CGContext(
+                data: nil,
+                width: pixelSize,
+                height: pixelSize,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else {
+            throw Error.contextAllocationFailed(pixelSize: pixelSize)
+        }
+
+        let nsContext = NSGraphicsContext(cgContext: cgContext, flipped: false)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = nsContext
+        nsContext.imageInterpolation = .high
+        image.draw(
+            in: NSRect(x: 0, y: 0, width: pixelSize, height: pixelSize),
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1.0
+        )
+        NSGraphicsContext.restoreGraphicsState()
+
+        guard let cgImage = cgContext.makeImage() else {
             throw Error.bitmapAllocationFailed(pixelSize: pixelSize)
         }
+        let rep = NSBitmapImageRep(cgImage: cgImage)
         rep.size = NSSize(width: pixelSize, height: pixelSize)
-
-        NSGraphicsContext.saveGraphicsState()
-        if let ctx = NSGraphicsContext(bitmapImageRep: rep) {
-            NSGraphicsContext.current = ctx
-            ctx.imageInterpolation = .high
-            image.draw(
-                in: NSRect(x: 0, y: 0, width: pixelSize, height: pixelSize),
-                from: .zero,
-                operation: .sourceOver,
-                fraction: 1.0
-            )
-        }
-        NSGraphicsContext.restoreGraphicsState()
 
         guard let data = rep.representation(using: .png, properties: [:]) else {
             throw Error.pngEncodingFailed(pixelSize: pixelSize)

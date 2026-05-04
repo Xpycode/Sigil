@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 /// The actor responsible for actually making Finder display a custom icon on
 /// a volume. Performs the two-step write required on macOS 13.1+:
@@ -46,7 +47,9 @@ actor IconApplier {
             case .readOnly(let url):
                 return "Can't write to '\(url.lastPathComponent)': volume is read-only."
             case .permissionDenied(let url):
-                return "Permission denied writing to '\(url.lastPathComponent)'."
+                // Most commonly TCC denying removable-volume access (macOS 13+).
+                // Point the user at the exact System Settings pane to fix it.
+                return "Can't write to '\(url.lastPathComponent)' — Sigil needs Removable Volumes access. Open System Settings → Privacy & Security → Files & Folders."
             case .diskFull(let url, let required, let available):
                 let have = available.map { ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file) } ?? "unknown"
                 let need = ByteCountFormatter.string(fromByteCount: Int64(required), countStyle: .file)
@@ -89,9 +92,15 @@ actor IconApplier {
             throw Error.underlying(error)
         }
 
-        // Step 2: read-modify-write FinderInfo to set byte 8 = 0x04.
+        // Step 2: cycle the FinderInfo `kHasCustomIcon` flag (clear → set) so
+        // Finder sees a state transition, not just a same-bit re-write.
+        // First applies (flag not yet set) degrade to a plain set; overwrites
+        // (flag already set from a previous apply) get the toggle, which
+        // empirically punches through Finder's icon-services cache when
+        // `noteFileSystemChanged` alone wasn't enough. See decision log
+        // 2026-05-04 ("Finder cache invalidation, round 3").
         do {
-            try Self.setCustomIconFlag(on: volumeURL)
+            try Self.cycleCustomIconFlag(on: volumeURL)
         } catch {
             // Roll back the orphan icon file — otherwise we'd leave garbage.
             try? fm.removeItem(at: iconURL)
@@ -151,6 +160,21 @@ actor IconApplier {
 
     // MARK: - Private helpers
 
+    /// Force a `kHasCustomIcon` state transition by clearing then setting
+    /// the flag. Bypasses Finder's icon-services cache, which on overwrites
+    /// otherwise sees "flag still set, no change" and serves the stale
+    /// cached icon.
+    ///
+    /// Safe with respect to other FinderInfo bytes (Finder colour labels
+    /// etc.): the underlying `clearCustomIconFlag` only touches byte 8 and
+    /// preserves the rest of the 32-byte blob; if the rest is all-zero, it
+    /// removes the xattr entirely (cleanest "fresh state" signal to
+    /// Finder), and `setCustomIconFlag` re-creates it with just byte 8 set.
+    private static func cycleCustomIconFlag(on volumeURL: URL) throws {
+        try clearCustomIconFlag(on: volumeURL)
+        try setCustomIconFlag(on: volumeURL)
+    }
+
     private static func setCustomIconFlag(on volumeURL: URL) throws {
         var info = (try XAttr.get(name: finderInfoKey, from: volumeURL.path)) ?? Data()
         if info.count < finderInfoLength {
@@ -176,19 +200,45 @@ actor IconApplier {
     }
 
     private static func touchVolume(_ url: URL) {
-        // `utimes(path, nil)` sets access/modification times to "now" without
-        // rewriting any file content. Finder treats this as a change signal
-        // and refreshes the mount-point's icon within 1-3 seconds.
+        // Belt-and-braces Finder cache invalidation. Empirically (verified
+        // against shasum-equal on-disk file vs. stale Finder thumbnail),
+        // Finder's volume-icon cache lives in two buckets keyed by:
+        //
+        //   • the volume URL (the directory containing .VolumeIcon.icns)
+        //   • the icns file URL itself (Finder treats the leading-dot
+        //     hidden path as its own cache entry)
+        //
+        // Notifying only the volume URL was enough on a *first* apply
+        // (no prior cache entry) but failed reliably on overwrites — same
+        // hash on disk as Sigil's saved copy, but Finder kept showing the
+        // previously-applied icon. So: bump mtime AND notify on both
+        // paths. `iconset` and `fileicon` (the popular custom-icon CLIs)
+        // do the same dual-notification dance.
+        let iconURL = url.appendingPathComponent(iconFilename)
         utimes(url.path, nil)
+        utimes(iconURL.path, nil)
+
+        let workspace = NSWorkspace.shared
+        workspace.noteFileSystemChanged(url.path)
+        workspace.noteFileSystemChanged(iconURL.path)
     }
 
     private static func freeSpaceBytes(at url: URL) -> Int? {
-        let keys: Set<URLResourceKey> = [.volumeAvailableCapacityForImportantUsageKey]
-        guard let values = try? url.resourceValues(forKeys: keys),
-              let bytes = values.volumeAvailableCapacityForImportantUsage else {
-            return nil
+        // ForImportantUsage is APFS-only — on ExFAT/FAT32/HFS+ it returns 0,
+        // not nil, so a plain `if let` would falsely report a full disk.
+        // Treat 0 as "no answer" and fall through to the legacy raw key.
+        let keys: Set<URLResourceKey> = [
+            .volumeAvailableCapacityForImportantUsageKey,
+            .volumeAvailableCapacityKey,
+        ]
+        guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
+        if let important = values.volumeAvailableCapacityForImportantUsage, important > 0 {
+            return Int(important)
         }
-        return Int(bytes)
+        if let raw = values.volumeAvailableCapacity, raw > 0 {
+            return raw
+        }
+        return nil
     }
 
     private static func mapCocoaWriteError(_ err: CocoaError, url: URL) -> Error {

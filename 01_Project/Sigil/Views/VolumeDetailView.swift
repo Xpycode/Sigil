@@ -74,32 +74,19 @@ struct VolumeDetailView: View {
         .padding(24)
         .task(id: info.id) { loadInitialState(for: info) }
         .onChange(of: pendingSource) { _, _ in renderPreview() }
-        .onChange(of: pendingZoom) { _, _ in renderPreview() }
         .onChange(of: pendingNote) { _, newValue in
             scheduleNoteSave(info: info, note: newValue)
         }
         .sheet(isPresented: $showResetConfirm) {
             ConfirmationSheet(
                 title: "Reset icon on '\(info.name)'?",
-                message: "Sigil will strip the custom icon from this volume, clear the FinderInfo flag, and remove Sigil's record. Finder will show the default drive icon.",
+                message: "Sigil will strip the custom icon from this volume, clear the FinderInfo flag, and remove Sigil's record. Finder will show the default drive icon.\n\nIf you want to keep the icon on the drive but stop Sigil tracking it, eject the volume first, then use Forget from the Remembered list.",
                 destructiveTitle: "Reset",
                 onConfirm: {
                     showResetConfirm = false
                     Task { await performReset(info) }
                 },
                 onCancel: { showResetConfirm = false }
-            )
-        }
-        .sheet(isPresented: $showForgetConfirm) {
-            ConfirmationSheet(
-                title: "Forget '\(info.name)'?",
-                message: "Sigil will remove this volume from its memory and delete its cached icon. Any icon already on the physical volume stays — use Reset if you also want to strip it.",
-                destructiveTitle: "Forget",
-                onConfirm: {
-                    showForgetConfirm = false
-                    Task { await performForget(identity: info.identity) }
-                },
-                onCancel: { showForgetConfirm = false }
             )
         }
     }
@@ -109,9 +96,7 @@ struct VolumeDetailView: View {
     private func rememberedDetail(_ record: VolumeRecord) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
-                Image(systemName: "externaldrive")
-                    .font(.system(size: 56, weight: .light))
-                    .foregroundStyle(Theme.secondaryText)
+                rememberedHeaderIcon
                 VStack(alignment: .leading, spacing: 4) {
                     Text(record.name)
                         .font(.system(size: 22, weight: .semibold))
@@ -145,6 +130,7 @@ struct VolumeDetailView: View {
             }
         }
         .padding(24)
+        .task(id: record.identity.raw) { loadCurrentIcon(for: record.identity) }
         .sheet(isPresented: $showForgetConfirm) {
             ConfirmationSheet(
                 title: "Forget '\(record.name)'?",
@@ -163,9 +149,10 @@ struct VolumeDetailView: View {
 
     private func header(_ info: VolumeInfo) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: "externaldrive.fill")
-                .font(.system(size: 56, weight: .light))
-                .foregroundStyle(Theme.accent)
+            // Show the committed icon (what's actually on the volume) — keeps
+            // the header as a quiet visual confirmation distinct from the
+            // editor canvas, which shows the in-progress preview.
+            headerIcon
             VStack(alignment: .leading, spacing: 4) {
                 Text(info.name)
                     .font(.system(size: 22, weight: .semibold))
@@ -179,6 +166,38 @@ struct VolumeDetailView: View {
                 .foregroundStyle(Theme.secondaryText)
             }
             Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private var headerIcon: some View {
+        if let image = currentIcon {
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        } else {
+            Image(systemName: "externaldrive.fill")
+                .font(.system(size: 56, weight: .light))
+                .foregroundStyle(Theme.accent)
+        }
+    }
+
+    /// Same as `headerIcon` but with the unmounted-volume fallback (outline
+    /// glyph in secondary text colour) when no cached icon exists.
+    @ViewBuilder
+    private var rememberedHeaderIcon: some View {
+        if let image = currentIcon {
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        } else {
+            Image(systemName: "externaldrive")
+                .font(.system(size: 56, weight: .light))
+                .foregroundStyle(Theme.secondaryText)
         }
     }
 
@@ -218,26 +237,6 @@ struct VolumeDetailView: View {
                 )
 
                 VStack(alignment: .leading, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text("Zoom")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Theme.secondaryText)
-                            Spacer()
-                            Text(String(format: "%.2f×", pendingZoom))
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(Theme.tertiaryText)
-                            Button("Reset") { pendingZoom = 1.0 }
-                                .buttonStyle(.borderless)
-                                .font(.caption)
-                                .foregroundStyle(Theme.secondaryText)
-                                .disabled(pendingZoom == 1.0)
-                        }
-                        Slider(value: $pendingZoom, in: 0.5...3.0)
-                            .disabled(!isZoomableSource)
-                    }
-                    .padding(.bottom, 8)
-
                     Button(action: { Task { await performApply(info) } }) {
                         if isApplying {
                             ProgressView().progressViewStyle(.circular).controlSize(.small)
@@ -257,13 +256,6 @@ struct VolumeDetailView: View {
                     .buttonStyle(.bordered)
                     .disabled(!isRemembered(info))
 
-                    Button(action: { showForgetConfirm = true }) {
-                        Text("Forget").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundStyle(.red)
-                    .disabled(!isRemembered(info))
-
                     if let status = statusMessage {
                         Text(status)
                             .font(.caption.monospaced())
@@ -279,7 +271,10 @@ struct VolumeDetailView: View {
                             .transition(.opacity)
                     }
                 }
-                .frame(width: 160, alignment: .leading)
+                // 200pt (was 160) — gives the zoom slider track and the
+                // Zoom / 1.00× / Reset row enough breathing room without
+                // overshadowing the canvas on the left.
+                .frame(width: 200, alignment: .leading)
 
                 Spacer(minLength: 0)
             }
@@ -379,24 +374,14 @@ struct VolumeDetailView: View {
         pendingSource ?? cachedSource
     }
 
-    /// `.icns` is already rasterized; zoom/mode do nothing. Everything else is
-    /// re-renderable through ImageNormalizer.
-    private var isZoomableSource: Bool {
-        guard let src = effectiveSource else { return false }
-        return src.pathExtension.lowercased() != "icns"
-    }
-
     private func canApply(_ info: VolumeInfo) -> Bool {
         guard !isApplying else { return false }
-        guard let id = info.identity else { return false }
-        // Always apply-able when user picked a new source.
-        if pendingSource != nil { return true }
-        // Otherwise only if we have a re-renderable cached source AND the
-        // user has moved sliders away from whatever's stored on the record.
-        guard let cachedSource,
-              cachedSource.pathExtension.lowercased() != "icns" else { return false }
-        guard let record = appState.remembered.first(where: { $0.identity == id }) else { return false }
-        return pendingMode != record.fitMode || pendingZoom != record.zoom
+        guard info.identity != nil else { return false }
+        // Apply requires a freshly picked source. With the zoom/mode controls
+        // gone (v1.0.1 — Finder cache makes mid-session re-renders unreliable
+        // to surface), there's no other reason to re-apply on the same
+        // already-applied icon.
+        return pendingSource != nil
     }
 
     private func loadInitialState(for info: VolumeInfo) {
@@ -422,12 +407,16 @@ struct VolumeDetailView: View {
     }
 
     private func loadCurrentIcon(for info: VolumeInfo) {
-        guard let id = info.identity else {
+        loadCurrentIcon(for: info.identity)
+    }
+
+    private func loadCurrentIcon(for identity: VolumeIdentity?) {
+        guard let identity else {
             currentIcon = nil
             return
         }
         Task {
-            let data = try? IconCache.loadIcns(for: id)
+            let data = try? IconCache.loadIcns(for: identity)
             let image = data.flatMap { NSImage(data: $0) }
             await MainActor.run { self.currentIcon = image }
         }
@@ -503,11 +492,17 @@ struct VolumeDetailView: View {
         errorMessage = nil
         do {
             try await appState.resetIcon(for: info)
+            // Full editor reset — bring slider/mode back to defaults too,
+            // not just the source/cache. Otherwise the slider stays at the
+            // last-applied zoom (e.g. 3.00×) after Reset, which reads as
+            // "Reset didn't fully reset."
             pendingSource = nil
             cachedSource = nil
             previewImage = nil
             pendingNote = ""
             currentIcon = nil
+            pendingZoom = 1.0
+            pendingMode = .fit
             statusMessage = "✓ Reset. Finder will revert within a few seconds."
         } catch {
             errorMessage = "✗ \(error.localizedDescription)"
@@ -519,6 +514,15 @@ struct VolumeDetailView: View {
         guard let identity else { return }
         do {
             try await appState.forget(identity: identity)
+            // Mirror performReset: editor must fully reset so the canvas,
+            // header, slider, mode, and note all return to their defaults.
+            pendingSource = nil
+            cachedSource = nil
+            previewImage = nil
+            pendingNote = ""
+            currentIcon = nil
+            pendingZoom = 1.0
+            pendingMode = .fit
             statusMessage = "✓ Forgotten."
         } catch {
             errorMessage = "✗ \(error.localizedDescription)"

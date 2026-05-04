@@ -27,6 +27,506 @@ This file tracks the **WHY** behind technical and design decisions. Append-only,
 
 ## Decisions
 
+### 2026-05-04 — Drop the zoom slider from v1.0.1
+
+**Context:** v1.0.0 shipped a Zoom slider (0.5×–3.0×) for adjusting how the
+source image fills the icon canvas. v1.0.1 testing surfaced that the slider
+*technically* works — the rendered `.VolumeIcon.icns` on disk correctly
+reflects the chosen zoom (verified by `shasum` matching Sigil's cached copy
+to the on-volume file) — but **Finder's icon-services cache reliably refuses
+to refresh** when an icon is overwritten on a volume that already had a
+custom icon. The user sees the zoom slider, drags it, clicks Apply, status
+reads "Applied," but Finder keeps showing the previously-applied icon.
+
+Three rounds of cache-invalidation tricks all failed to break through:
+
+1. `utimes(volumeURL, nil)` — the original v1.0.0 nudge.
+2. Pair `utimes` with `NSWorkspace.shared.noteFileSystemChanged` on the
+   volume URL.
+3. Same as (2) but on **both** the volume URL and the icns file URL.
+4. (3) plus a `kHasCustomIcon` FinderInfo flag toggle (clear → set) on every
+   apply, forcing a state transition Finder couldn't ignore.
+
+None reliably refresh the volume thumbnail on overwrite. The only thing
+that always works is eject + remount (or `killall Finder`), neither of
+which Sigil should silently inflict.
+
+**Options Considered:**
+
+1. **Drop the zoom slider** — remove the UI and supporting state. Editor
+   becomes Drop → Apply. First-time applies still work correctly (no prior
+   cached icon, Finder reads fresh); the broken-feeling re-apply path
+   stops existing.
+2. **Keep the slider but mark it "experimental" in the UI** — preserves the
+   feature for power users who'll eject/remount. Invites confusion for
+   everyone else.
+3. **Keep the slider, add a "Refresh in Finder" button that programmatically
+   ejects and remounts the volume** — guarantees cache invalidation.
+   Disruptive (the volume disappears for a moment); requires DiskArbitration
+   wiring; significant new code surface for a small payoff.
+4. **Build a real fix** — there isn't one available within Sigil's scope.
+   Apple owns this cache.
+
+**Decision:** Option 1. Slider removed. `pendingZoom` and `pendingMode`
+remain as `@State` (defaulting to 1.0 / .fit) so the apply pipeline
+signature stays unchanged — they're effectively constants now. The Apply
+pipeline still threads them through `IconRenderer.render → ImageNormalizer.normalize`
+exactly as before; just no UI to vary them.
+
+`canApply` simplified accordingly: Apply enables only when there's a fresh
+`pendingSource`. No more re-apply-on-same-source path (which was the
+broken one).
+
+**Rationale:** Sigil's promise is "drop image → that's the icon." A feature
+that's correct on disk but visibly broken in Finder fails to deliver on
+that promise more than it adds. The first-apply case (no prior icon)
+still works — users get custom icons. They just don't get a slider for
+adjusting the zoom of an already-applied icon. The trade-off feels right
+for a small focused tool.
+
+**Trade-offs accepted:**
+- Users who want a center-crop ("just the 512 GB label, not the whole
+  card") have to pre-crop in Preview before dropping. Same as the Fit/Fill
+  removal in 2026-04-20: minor capability lost, major confusion avoided.
+- Existing `VolumeRecord` records carry `zoom` and `fitMode` fields that
+  are now ignored at apply time. Kept for back-compat; no migration; new
+  applies always write `1.0` / `.fit`. Old records with non-1.0 zoom won't
+  re-render at that zoom on re-apply, but with the slider gone the user
+  has no way to ask for that anyway.
+
+**Revisit if:** Apple ships a reliable Finder volume-icon cache invalidation
+API, or we add a programmatic eject/remount feature for some other reason
+(at which point zoom can ride along).
+
+**Affected:**
+- `01_Project/Sigil/Views/VolumeDetailView.swift` — removed the zoom HStack
+  + Slider + `.onChange(of: pendingZoom)`; removed `isZoomableSource`;
+  simplified `canApply` to `pendingSource != nil`. `pendingZoom` and
+  `pendingMode` `@State` retained as constants.
+
+**What we did NOT revert:** the cache-invalidation work from this session
+(`noteFileSystemChanged` on both paths + FinderInfo flag toggle in
+`IconApplier`) is kept. It doesn't help re-applies enough to save zoom,
+but it's correct hygiene for first-applies and might be enough for any
+future Sigil feature that re-touches a volume's custom icon. Documented
+in earlier decision entries.
+
+---
+
+### 2026-05-04 — Reset / Forget must reset zoom + mode too
+
+**Context:** `performReset` and `performForget` cleared most editor state
+(`pendingSource`, `cachedSource`, `previewImage`, `pendingNote`,
+`currentIcon`) but left `pendingZoom` and `pendingMode` at whatever values
+the last Apply had set them to. After a Reset on a 3.00× icon, the slider
+stayed pinned at 3.00×. Reads as "Reset didn't fully reset."
+
+**Decision:** Both functions now also `pendingZoom = 1.0` and
+`pendingMode = .fit`. Trivial change; brings the editor to a clean,
+consistent post-Reset / post-Forget state matching what the user sees
+when they first select a fresh volume.
+
+**Affected:** `01_Project/Sigil/Views/VolumeDetailView.swift`
+(`performReset`, `performForget`).
+
+---
+
+### 2026-05-04 — Finder cache invalidation, round 2: notify both volume URL AND icns file URL
+
+**Context:** Round-1 fix (pair `utimes` with `NSWorkspace.noteFileSystemChanged`
+on the volume URL) helped on first applies but didn't reliably refresh
+Finder on overwrites. Definitive diagnosis came from a `shasum` comparison
+between Sigil's saved icns at `~/Library/Application Support/Sigil/icons/<UUID>.icns`
+and the on-disk `/Volumes/<vol>/.VolumeIcon.icns` — they matched bit-for-bit.
+So the bytes were correct on disk; Finder was simply serving a cached icon
+from a previous apply.
+
+Investigation showed Finder's volume-icon cache lives in **two** buckets,
+keyed independently by:
+- the volume URL (the directory containing the icns), and
+- the icns file URL itself (Finder treats the leading-dot hidden path as
+  its own cache entry).
+
+Notifying only the volume URL invalidates the first bucket but leaves the
+second populated; Finder serves from whichever it consults first.
+
+**Decision:** Bump mtime AND post `noteFileSystemChanged` for **both** the
+volume URL and the icns URL. Same calls, twice each, against two paths.
+
+Reference implementations in `iconset` and `fileicon` (popular custom-icon
+CLIs) do the same dual-path dance — confirmed reading their source.
+
+**Trade-offs accepted:** Two extra syscalls per apply (one `utimes`, one
+notification). Negligible cost; runs once per Apply, not per render tier.
+
+**Revisit if:** Even dual notification proves insufficient on some volumes
+or future macOS releases. The next escalation is toggling the
+`kHasCustomIcon` FinderInfo flag (clear → set) — that forces Finder to
+re-evaluate "does this volume have a custom icon" entirely, not just
+"what icon." More invasive (extra xattr write); kept in reserve.
+
+**Affected:** `01_Project/Sigil/Services/IconApplier.swift`
+(`touchVolume` — notify on both `url.path` and
+`url.appendingPathComponent(iconFilename).path`).
+
+---
+
+### 2026-05-04 — Reset / Forget must reset zoom + mode too
+
+**Context:** v1.0.1 testing surfaced that re-applying an icon (with a new
+zoom value) to a previously-iconned volume succeeded end-to-end on disk —
+the saved `.VolumeIcon.icns` correctly contained the zoomed content (verified
+via Quick Look) — but Finder continued to show the *previously-applied*
+volume icon. The user's natural reading was "the zoom slider doesn't work."
+Real bug: Finder's volume-icon cache wasn't being invalidated when the icns
+was overwritten in place.
+
+`IconApplier.touchVolume` already called `utimes(volumeURL.path, nil)` to
+nudge mtime/atime. That works on a *first* apply (no prior icon → Finder
+reads fresh) but is documented to be insufficient when **overwriting an
+existing file in place** — Finder's cache is keyed by inode + mtime + size,
+and a same-size atomic-replace can slip past it.
+
+**Options Considered:**
+1. **Pair `utimes` with `NSWorkspace.shared.noteFileSystemChanged(path)`** —
+   the canonical "I just changed this, please re-look at it now" push hint.
+   Used by both popular custom-icon CLIs (`fileicon`, `iconset`). Apple
+   discourages it for general filesystem watching (FSEvents replaced FNNotify
+   there) but it remains the right tool for this specific push case.
+2. **Force-remove the old icns before writing the new one** — generates a
+   guaranteed-different inode. Reliable invalidation. Downside: brief window
+   where the volume has no `.VolumeIcon.icns`, during which Finder might
+   render the default drive icon and the user sees a flicker.
+3. **Use AppleScript `tell application "Finder" to update <volume>`** —
+   most heavy-handed; spawns or wakes Finder, requires Automation permission,
+   defeats the unobtrusiveness Sigil aims for.
+
+**Decision:** Option 1. Single line added after `utimes`. No flicker, no new
+permissions, no subprocess overhead, no behavior change on the first apply
+(both calls are no-op-equivalent when nothing was cached).
+
+**Rationale:** The whole reason `touchVolume` exists is to invalidate
+Finder's perception of the volume icon. `utimes` is the polite-but-quiet
+hint; `noteFileSystemChanged` is the explicit one. Together they cover both
+the "first apply" path (where utimes alone works) and the "overwrite" path
+(where it doesn't). Same call shape, same place in the code, near-zero
+cognitive overhead for future readers (extensive comment explains the why).
+
+**Trade-offs accepted:** `noteFileSystemChanged` is documented as
+"discouraged" for general filesystem watching, but the docs explicitly note
+that the alternative (FSEvents) is for *receiving* notifications, not
+*sending* them. For the push case, this API is still the supported path.
+
+**Revisit if:** Apple removes `noteFileSystemChanged` entirely (no signs of
+deprecation as of macOS 15) or if Finder's cache invalidation behavior
+changes again. Both unlikely.
+
+**Affected:** `01_Project/Sigil/Services/IconApplier.swift` (added
+`import AppKit` and one line in `touchVolume`).
+
+**Sources:** Apple Developer Documentation — [`NSWorkspace.noteFileSystemChanged`](https://developer.apple.com/documentation/appkit/nsworkspace/1579268-notefilesystemchanged),
+plus reference implementations in [`fileicon`](https://github.com/mklement0/fileicon)
+and [`iconset`](https://github.com/tale/iconset).
+
+---
+
+### 2026-05-04 — Drop Forget from mounted detail; keep on Remembered only
+
+**Context:** A user-perspective audit raised that on a mounted volume, the
+Forget button is **strictly redundant** with Reset:
+
+- Reset (`AppState.resetIcon`): strips `.VolumeIcon.icns` from the drive,
+  clears the FinderInfo flag, removes the record, deletes the cache.
+- Forget (`AppState.forget`): removes the record, deletes the cache. Leaves
+  the on-drive icon intact.
+
+Reset is a **strict superset** of Forget when a volume is mounted. Two buttons
+side-by-side that look like they "do almost the same thing" are textbook UX
+confusion — and Sigil is a small focused tool where every visible control
+should pay rent.
+
+**Options Considered:**
+1. **Drop Forget from the mounted detail view; keep it only on Remembered
+   (unmounted) volumes** — eliminates the side-by-side redundancy.
+   Functional necessity preserved (you can't Reset an unmounted disk because
+   Reset writes to it; Remembered volumes still need *some* way to be pruned
+   from the list). Cross-Mac power-user workflow ("apply icon, hand card to
+   colleague, stop tracking it on my Mac without erasing the icon") becomes
+   a two-step: eject the card, then Forget from the Remembered section.
+2. **Rename both buttons** — e.g. Reset → "Remove icon", Forget → "Remove
+   from list" — to make the distinction clearer. Doesn't actually solve the
+   redundancy on mounted volumes, just papers over it.
+3. **Keep both as-is** — status quo. Costs the user a moment of "wait,
+   what's the difference" every time they're about to remove an icon.
+
+**Decision:** Option 1. Mounted detail now shows: Apply · Reset to default.
+Remembered detail still shows: Forget. Reset's confirmation copy now points
+at the cross-Mac workflow as discoverable text:
+
+> "...remove Sigil's record. Finder will show the default drive icon.
+>
+> If you want to keep the icon on the drive but stop Sigil tracking it,
+> eject the volume first, then use Forget from the Remembered list."
+
+**Rationale:** The cross-Mac case is real but niche; users who care about
+that semantic now have it documented in the Reset confirmation rather than
+needing to discover it by comparing two button captions. The everyday user
+sees one obvious destructive action ("Reset to default") that does what its
+name says. The Remembered view still has Forget because functionally it
+*must* — you cannot Reset a disk that is not currently writeable.
+
+**Trade-offs accepted:** One extra step (eject) for the cross-Mac workflow.
+Acceptable; rare flow, and the eject is itself a meaningful safety boundary
+(physically separating the card from your Mac before declaring "I'm done
+with this here").
+
+**Revisit if:** A noticeable fraction of users want to declutter Sigil's
+Remembered list while volumes are still mounted. (No evidence of this so
+far; if it surfaces, a Cmd-modifier on Reset, or a small ⋯ menu, can
+re-introduce Forget without putting the redundant button back in the
+default flow.)
+
+**Affected:** `01_Project/Sigil/Views/VolumeDetailView.swift` (removed the
+Forget button + its `.sheet` wiring from the mounted detail; enriched the
+Reset confirmation copy with the eject-first hint).
+
+---
+
+### 2026-05-04 — Icon pipeline: explicit sRGB CGContext (not `.deviceRGB` / `NSImage(size:flipped:)`)
+
+**Context:** v1.0.1 smoke test surfaced a colour-shift bug: an Angelbird AV PRO
+SE CFexpress B silver-card source rendered as visibly gold/warm in the saved
+`.VolumeIcon.icns` (verified in Quick Look). Same source had rendered correctly
+silver in earlier sessions. Two root causes in the icon pipeline:
+
+1. **`ImageNormalizer.normalize`** built its 1024×1024 canvas with
+   `NSImage(size:flipped:drawingHandler:)`. Per Apple Developer Forums thread
+   728687 ("How To Resize An Image and Retain Wide Color Gamut"), drawing
+   handlers create a context with **unspecified** colour space — the
+   destination ends up tagged with whatever the implicit context happens to
+   be, which on Sonoma+ wide-gamut displays defaults to a P3-like profile.
+2. **`IconsetWriter.renderPNG`** allocated its `NSBitmapImageRep` with
+   `colorSpaceName: .deviceRGB`. `.deviceRGB` is **device-dependent**: on a
+   Display P3 Mac (every M-series MacBook Pro, every Studio Display), this
+   resolves to a P3 destination. Drawing an sRGB-tagged source into a P3
+   destination triggers a colour-space conversion that warps neutral
+   metallics — silver → gold is the characteristic artifact.
+
+Compounded, the pipeline tagged its PNGs with the device profile, embedded
+them in the icns, and Finder rendered the P3-encoded silver back on a P3
+display as visibly warm. The bug was latent on every wide-gamut Mac since
+shipping; it just hadn't surfaced because the dev's earlier smoke tests had
+landed on a colour profile that happened to round-trip cleanly.
+
+**Options Considered:**
+1. **Explicit sRGB throughout the pipeline** — build both contexts via
+   `CGContext(... space: CGColorSpace(name: CGColorSpace.sRGB), ...)` and
+   wrap in `NSGraphicsContext` for AppKit drawing. Apple's recommended
+   pattern (Developer Forums thread 679891). Source images get colour-mapped
+   into sRGB once at normalize time; PNGs are tagged sRGB; Finder renders
+   sRGB; round-trip is stable.
+2. **Explicit Display P3 throughout** — preserve wide gamut for sources that
+   have it. Marginal benefit (icons are small UI surfaces), and risks
+   looking off when the user moves the volume to a non-P3 display.
+3. **Use `NSColorSpaceName.calibratedRGB`** — generic device-independent RGB.
+   Closer to sRGB than `.deviceRGB` but still imprecise; depends on AppKit's
+   internal mapping and could shift again across macOS releases.
+
+**Decision:** Option 1. Explicit sRGB in both places via `CGContext` →
+`NSGraphicsContext(cgContext:flipped:)` → AppKit drawing → `cgContext.makeImage()` →
+`NSBitmapImageRep(cgImage:)`. ICC profile is unambiguous, deterministic, and
+matches what Finder/Dock/`iconutil` expect from icon assets.
+
+**Rationale:** Volume icons aren't wide-gamut content — they're small UI
+glyphs displayed at 16–1024 px. sRGB covers all the colour Finder will ever
+display them in. The explicit `CGColorSpace.sRGB` context removes any
+ambiguity about destination tagging, so the same source produces the same
+output regardless of which display the dev (or user) happens to have plugged
+in. The fix lives at the two pipeline endpoints (normalize + per-tier PNG
+encode), so it covers both the in-app preview and the on-disk icns.
+
+**Trade-offs accepted:** Wide-gamut sources (Display P3 PNGs from photo apps)
+get clipped to sRGB gamut at normalize time. Saturated reds/greens lose ~5%
+chroma. Acceptable for UI iconography.
+
+**Revisit if:** Apple introduces a new ICNS-with-color-profile container
+format, or Finder starts rendering volume icons in wide-gamut contexts where
+P3 would visibly improve fidelity. (Neither has happened as of macOS 15.)
+
+**Affected:** `01_Project/Sigil/Services/ImageNormalizer.swift` (replaced
+`NSImage(size:flipped:drawingHandler:)` with explicit-sRGB CGContext path,
+added `.contextAllocationFailed` error case),
+`01_Project/Sigil/Services/IconsetWriter.swift` (replaced `.deviceRGB`
+NSBitmapImageRep with explicit-sRGB CGContext path, added
+`.contextAllocationFailed` error case).
+
+**Sources:** Apple Developer Forums [thread 728687](https://developer.apple.com/forums/thread/728687)
+("How To Resize An Image and Retain Wide Color Gamut"), [thread 679891](https://developer.apple.com/forums/thread/679891)
+("How to create RGBA CGColorSpace / bitmap CGContext").
+
+---
+
+### 2026-05-04 — Detail header shows actual icon (not SF Symbol placeholder)
+
+**Context:** `VolumeDetailView` rendered its 56-pt header icon as a hardcoded
+SF Symbol (`externaldrive.fill` for mounted, `externaldrive` for remembered)
+even when the volume had a real custom icon applied. Since the sidebar rows
+already showed real cached thumbnails, the detail view felt inconsistent
+with itself ("the small one knows but the big one doesn't").
+
+**Decision:** Header now shows `currentIcon` (loaded from `IconCache` via
+`loadCurrentIcon(for:)`) when available; falls back to the SF Symbol when
+no cached icon exists.
+
+**Live preview vs committed state:** The header reflects only `currentIcon`
+(the committed on-disk icon), not `previewImage` (the live editor preview).
+This keeps the header as a quiet visual confirmation of "this is what's on
+the drive" while the canvas remains the editing surface. Watching both
+animate during a slider drag would be busy.
+
+**Both code paths:** Mounted and remembered headers both updated. The
+remembered path also gained a `.task(id: record.identity.raw)` that calls
+the now-shared `loadCurrentIcon(for: VolumeIdentity?)` helper, since the
+disconnected-volume detail view never loaded the icon before.
+
+**Affected:** `01_Project/Sigil/Views/VolumeDetailView.swift` (extracted
+`headerIcon` / `rememberedHeaderIcon` view-builders, refactored
+`loadCurrentIcon` to share between mounted and remembered paths, wired
+remembered's `.task(id:)` loader).
+
+---
+
+### 2026-05-04 — `performForget` resets editor state to match `performReset`
+
+**Context:** Tapping Forget left the editor in a half-forgotten state —
+canvas kept showing the just-rendered preview, note text persisted, etc.,
+even though the volume had been removed from `appState.remembered` and the
+header had reset to the generic drive icon. `performReset` already did the
+right cleanup; `performForget` only updated `statusMessage`.
+
+**Decision:** `performForget` now mirrors `performReset`'s editor reset
+(clears `pendingSource`, `cachedSource`, `previewImage`, `pendingNote`,
+`currentIcon`). The only difference between Reset and Forget remains the
+underlying service call — Reset strips the icon from disk, Forget just
+removes Sigil's record.
+
+**Affected:** `01_Project/Sigil/Views/VolumeDetailView.swift`
+(`performForget`).
+
+---
+
+### 2026-05-04 — Removable-volume TCC: declare `NSRemovableVolumesUsageDescription`
+
+**Context:** After fixing the disk-space preflight (entry below), the apply path
+surfaced a second failure: macOS returned `EACCES` from `Data.write` to the
+ExFAT volume root. Cause: since macOS 13 Ventura, even non-sandboxed apps need
+TCC permission to write to removable-volume roots. Without
+`NSRemovableVolumesUsageDescription` in `Info.plist`, macOS refuses the write
+**without ever showing a prompt** — the user has no way to grant access from
+inside the app, and the System Settings → Files & Folders pane shows no Sigil
+entry to flip on.
+
+This was missed during initial development for the same reason as the
+disk-space bug: all dev testing happened on local APFS volumes
+(`~/Library/Application Support/Sigil/`, internal Macintosh HD), where the
+Removable Volumes TCC bucket doesn't apply.
+
+**Options Considered:**
+1. **Add `NSRemovableVolumesUsageDescription` with a clear copy string** — the
+   correct, Apple-blessed path. User gets a one-time prompt on first apply;
+   System Settings shows Sigil under Files & Folders → Removable Volumes
+   forever after.
+2. **Add a runtime check that detects EACCES and pops a custom dialog
+   explaining how to fix it** — works around the missing Info.plist key but
+   still requires the user to leave the app and toggle a Settings switch
+   manually. Strictly worse UX.
+3. **Switch to a privileged helper / SMAppService model** — overkill; would
+   require codesigning a helper, install/remove ceremony, persistent launchd
+   job. Wildly disproportionate for "write a 1MB icon file."
+
+**Decision:** Option 1. Added the key with the string:
+> "To apply the icon you chose, Sigil writes a small icon file to the drive's
+> root so it appears in Finder."
+
+Chose this wording (combo of two earlier candidates AB1/AB3) because it (a)
+mirrors the action the user just took ("apply"), (b) explains *what* gets
+written so the request feels honest and bounded, and (c) avoids the redundant
+"needs permission to" framing that the OS chrome already provides.
+
+Also improved `IconApplier.Error.permissionDenied`'s message to point users at
+the exact System Settings pane, since some users will tap "Don't Allow" on the
+prompt and need to course-correct without guesswork.
+
+**Rationale:** The string is permanent UX — it appears in the macOS prompt
+forever and in the System Settings pane forever — so it's worth getting right.
+Apple rejects vague strings ("for app functionality"); concrete strings tied
+to user-visible actions sail through review.
+
+**Trade-offs accepted:** v1.0.0 users who already installed will see a fresh
+permission prompt on first apply after upgrading. This is the correct system
+behavior but should be called out in v1.0.1 release notes.
+
+**Revisit if:** Apple changes TCC behavior again (Sequoia / macOS 16 has
+already tightened removable-volume rules once more — worth monitoring).
+
+**Affected:** `01_Project/Sigil/Info.plist` (added key, bumped version to
+1.0.1 / build 2), `01_Project/Sigil/Services/IconApplier.swift` (improved
+permissionDenied error copy).
+
+**Note for later cleanup:** `Sigil.xcodeproj/project.pbxproj` already had
+`MARKETING_VERSION = 1.0.1` and `CURRENT_PROJECT_VERSION = 101` set, but they
+were inert because `GENERATE_INFOPLIST_FILE = NO` and Info.plist used literal
+strings rather than `$(MARKETING_VERSION)` substitution. Consider switching
+Info.plist to substitution form so version lives in one place — or just
+delete the dormant pbxproj entries.
+
+---
+
+### 2026-05-04 — Disk-space preflight: dual-key probe, skip-on-unknown
+
+**Context:** v1.0.0 user reported that applying an icon to an ExFAT CFExpress B card
+failed with "Volume 'XH2S-512' is full — need 1.2 MB, have Zero KB." The card was
+nowhere near full. Root cause: `IconApplier.freeSpaceBytes` queried only
+`volumeAvailableCapacityForImportantUsageKey`, which is APFS-specific and returns
+`0` (not nil) on ExFAT/FAT32/HFS+. Since Sigil targets *external volumes* — and
+external volumes are overwhelmingly ExFAT — this silently broke the core flow on
+the most common real-world case.
+
+**Options Considered:**
+1. **Use only the legacy `volumeAvailableCapacityKey`** — works everywhere but
+   ignores APFS purgeable storage, so preflight could falsely reject on APFS
+   volumes that Finder shows as having space.
+2. **Try ForImportantUsage first, fall back to legacy when it returns nil OR 0** —
+   correct for both filesystems; matches what Finder reports on APFS and gives a
+   real number on ExFAT.
+3. **Keep the APFS-only key but skip the preflight entirely when unavailable** —
+   defers all errors to ENOSPC at write time. Worse UX: user sees a generic
+   write failure with the partially-written `.VolumeIcon.icns` left on disk.
+
+**Decision:** Option 2. Dual-key with `> 0` guard on the APFS key. When **both**
+keys return nil/0, return nil and let the preflight skip the check (the `if let
+available` short-circuits) — i.e. **skip-on-unknown, attempt the write**.
+
+**Rationale:** Better to attempt and surface a real ENOSPC than to falsely block
+when measurement fails. The atomic write in step 1 means a true ENOSPC leaves
+nothing partial on the volume; only the FinderInfo step writes more bytes, and
+that's <100 bytes, so the slack-byte budget covers it.
+
+**Trade-offs accepted:** On a genuinely-full unmeasurable volume, the user sees
+a kernel ENOSPC error from `Data.write` instead of our friendlier "Volume is
+full" message. Acceptable — that case is vanishingly rare (every macOS-supported
+filesystem reports capacity), and the kernel message is still actionable.
+
+**Revisit if:** We add support for unusual filesystems (NTFS via paragon,
+network mounts, FUSE) where capacity reporting is genuinely unreliable. At that
+point, consider a small probe-write strategy.
+
+**Affected:** `01_Project/Sigil/Services/IconApplier.swift` (freeSpaceBytes),
+`docs/docs/cookbook/29-disk-space-preflight.md` (DiskSpace.availableCapacity
+example had the same flaw — fixed inline + added explicit non-APFS warning).
+
+---
+
 ### 2026-04-19 — Product name: Sigil; bundle ID: `com.lucesumbrarum.sigil`
 
 **Context:** Working codename was "CVI" (Custom Volume Icons) — descriptive but generic. User has personal Apple Developer namespace `com.lucesumbrarum` (Latin: "lights of shadows" / chiaroscuro). Brainstorm produced six candidates spanning literal (DriveIcon), heraldic (Crest, Marque), Latin (Lares, Tessera), and English-evocative (Sigil, Imprint).
