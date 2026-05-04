@@ -11,12 +11,12 @@
 - **Started:** 2026-04-19
 
 ## Current Position
-- **Funnel:** **done** — v1.0.0 shipped; **v1.0.1 built + smoke-tested, awaiting tag/notarize**
-- **Phase:** shipped (v1.0.1 in flight)
-- **Focus:** v1.0.1 fixes two v1.0.0 bugs surfaced by user testing on real ExFAT card: (1) APFS-only disk-space probe falsely reported "Zero KB" on non-APFS volumes; (2) missing `NSRemovableVolumesUsageDescription` made macOS silently deny removable-volume writes. Both fixed; smoke-test on XH2S-512 CFExpress B card passed end-to-end. Open question: ship v1.0.1 as bug-fix-only or bundle the three quality items from the 2026-04-20-d code review.
-- **Status:** v1.0.1 candidate built (build 2), local Debug verified
+- **Funnel:** **done** — **v1.0.1 shipped** (https://github.com/Xpycode/Sigil/releases/tag/v1.0.1)
+- **Phase:** shipped
+- **Focus:** v1.0.1 released as a maintenance update fixing two v1.0.0 bugs surfaced by real-hardware testing: (1) APFS-only disk-space probe falsely reported "Zero KB" on every non-APFS volume; (2) missing `NSRemovableVolumesUsageDescription` made macOS silently deny removable-volume writes since macOS 13. Plus polish: Forget-button removal from mounted view, header icon shows actual icon, Reset/Forget fully reset editor, sRGB color pipeline, dual-path Finder cache invalidation, FinderInfo flag toggle. **Zoom slider removed** — Finder's icon-services cache reliably refused to refresh on overwrite, making the slider visibly broken even though the icns on disk was correct. Editor is now Drop → Apply.
+- **Status:** v1.0.1 shipped (notarized DMG, 12.0 MB, attached to GitHub release)
 - **Last updated:** 2026-05-04
-- **Test count:** 31 green (zoom + IconCache regression tests still pending — slated for v1.1)
+- **Test count:** 31 green (zoom + IconCache regression tests still pending — slated for v1.1; less urgent now that zoom is gone)
 - **Repo:** `github.com/Xpycode/Sigil` — `main` at `fa3ea86`. Tag `v1.0.0` pushed; DMG (12 MB, notarized + stapled) attached to the release. 9 wave tags + 3 feature branches in history (`feature/ui-redesign-zoom`, `feature/drop-fit-fill-ui`, `feature/release-polish-v1.0.0`).
 - **App icon:** Wax-seal, blackletter S on obsidian (Kling-generated from Prompt A). `AppIcon.appiconset` wired at 10 sizes.
 - **Signing:** Managed Developer ID Application (team `FDMSRXXN73`, Luces Umbrarum). No local Developer ID cert needed — Xcode handles via Apple's services.
