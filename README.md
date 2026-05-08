@@ -5,17 +5,17 @@ A macOS app that assigns custom icons to external volumes — and **remembers th
 ![macOS](https://img.shields.io/badge/macOS-14.0+-blue.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)
-[![Download](https://img.shields.io/badge/Download-v1.0.0-blue.svg)](https://github.com/Xpycode/Sigil/releases/latest)
+![Version](https://img.shields.io/badge/version-1.0.1-brightgreen.svg)
+[![Download](https://img.shields.io/badge/Download-v1.0.1-blue.svg)](https://github.com/Xpycode/Sigil/releases/latest)
 ![Downloads](https://img.shields.io/github/downloads/Xpycode/Sigil/total.svg)
 
 ## Screenshots
 
 ![Sigil main window](03_Screenshots/Sigil-1-Hero.png)
-*Main window — sidebar lists mounted and remembered volumes, detail pane holds the drop zone, zoom, and actions*
+*Main window — sidebar lists mounted and remembered volumes, detail pane holds the drop zone and actions*
 
 ![Applied state](03_Screenshots/Sigil-2-applied.png)
-*Applied state — current icon fills the canvas at the chosen zoom, ready to adjust or reset*
+*Applied state — current icon fills the canvas, ready to reset or replace*
 
 ![Custom icon in Finder](03_Screenshots/Sigil-3-Finder.png)
 *Finder — custom icons persist on the volume, visible anywhere macOS shows drive icons*
@@ -28,7 +28,6 @@ A macOS app that assigns custom icons to external volumes — and **remembers th
 - **Apply** custom icons from PNG, JPEG, HEIC, or `.icns` files via drag-and-drop or click-to-browse
 - **Remember** every assignment in a local database keyed by volume UUID
 - **Silent re-apply** — plug a known drive back in and Sigil writes its icon back within 1–3 seconds, no clicks required
-- **Zoom** — dial in framing for non-square source images (1.0× fits, higher values fill)
 - **Conflict detection** — if the volume's icon changed outside Sigil, Sigil asks rather than clobbering
 - **Per-volume notes** — tag what each drive is for; notes show in the Remembered group even when unplugged
 - **Reset** — one click returns a volume to its default Finder icon
@@ -40,7 +39,7 @@ macOS Finder stores a custom volume icon as a hidden `.VolumeIcon.icns` file on 
 
 ## Installation
 
-1. Download `Sigil-v1.0.0.dmg` from [Releases](https://github.com/Xpycode/Sigil/releases/latest)
+1. Download `Sigil-1.0.1.dmg` from [Releases](https://github.com/Xpycode/Sigil/releases/latest)
 2. Open the DMG and drag Sigil to Applications
 3. Launch from Applications folder
 
@@ -51,8 +50,7 @@ The DMG is notarized by Apple — no Gatekeeper warning on first launch.
 1. **Plug in** an external volume
 2. **Select it** in the Mounted sidebar
 3. **Drop or click** an image onto the canvas
-4. **Zoom** the preview if needed (raster sources only; `.icns` is already sized)
-5. **Apply** — the Finder icon updates within a second
+4. **Apply** — the Finder icon updates within a second
 
 Once applied, the assignment is remembered. Eject and replug the drive anytime — Sigil re-applies silently.
 
@@ -78,9 +76,9 @@ This bypasses `NSWorkspace.setIcon(_:forFile:options:)`, which [silently fails o
 
 Sigil stores:
 
-- `~/Library/Application Support/Sigil/volumes.json` — UUID, name, note, zoom, hash, timestamps, plus a rolling `.bak`
+- `~/Library/Application Support/Sigil/volumes.json` — UUID, name, note, hash, timestamps, plus a rolling `.bak`
 - `~/Library/Application Support/Sigil/icons/{uuid}.icns` — cached rendered icon for silent re-apply
-- `~/Library/Application Support/Sigil/icons/{uuid}.src.{ext}` — cached source for re-rendering on zoom change
+- `~/Library/Application Support/Sigil/icons/{uuid}.src.{ext}` — cached source so the icon can be re-rendered without re-picking the file
 
 Sigil does **not** run in the background. The mount watcher only operates while the app is open. If a drive is plugged in while Sigil is closed, its icon re-applies next time you open Sigil.
 
