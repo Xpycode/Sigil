@@ -14,10 +14,13 @@ A macOS app that assigns custom icons to external volumes — and **remembers th
 ![Sigil main window](03_Screenshots/Sigil-1-Hero.png)
 *Main window — sidebar lists mounted and remembered volumes, detail pane holds the drop zone and actions*
 
-![Applied state](03_Screenshots/Sigil-2-applied.png)
+![Removable Volumes permission prompt](03_Screenshots/Sigil-2-Permission.png)
+*Permission prompt — on macOS 13+, the first apply asks for Removable Volumes access; click Allow*
+
+![Applied state](03_Screenshots/Sigil-3-applied.png)
 *Applied state — current icon fills the canvas, ready to reset or replace*
 
-![Custom icon in Finder](03_Screenshots/Sigil-3-Finder.png)
+![Custom icon in Finder](03_Screenshots/Sigil-4-Finder.png)
 *Finder — custom icons persist on the volume, visible anywhere macOS shows drive icons*
 
 ![Remembered volumes](03_Screenshots/Sigil-5-remembered.png)
